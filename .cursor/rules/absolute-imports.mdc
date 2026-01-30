@@ -1,0 +1,37 @@
+---
+description: Enforce absolute imports over relative imports
+globs: apps/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Absolute Imports
+
+Always use absolute imports with path aliases instead of relative imports.
+
+## Next.js (apps/web)
+
+Use the `@/` alias configured in tsconfig.json:
+
+```typescript
+// ❌ BAD - relative imports
+import { Button } from '../../../components/ui/button'
+import { cn } from '../../lib/utils'
+
+// ✅ GOOD - absolute imports with @ alias
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+```
+
+## NestJS (apps/api)
+
+Use the `src/` path, `utils/` path, or other absolute paths like `lib/` or module-based imports:
+
+```typescript
+// ❌ BAD - relative imports
+import { AppService } from '../../../app.service'
+import { UserEntity } from '../../entities/user.entity'
+
+// ✅ GOOD - absolute imports from src or other absolute paths like utils
+import { AppService } from 'src/app.service'
+import { UserEntity } from 'src/entities/user.entity'
+```

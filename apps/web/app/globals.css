@@ -1,0 +1,203 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Afro-Futurism Dark Theme - Lokocontent */
+:root {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #141414;
+  --card-foreground: #fafafa;
+  --popover: #1a1a1a;
+  --popover-foreground: #fafafa;
+  --primary: #d4af37;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a1a1a1;
+  --accent: #2dd4bf;
+  --accent-foreground: #0a0a0a;
+  --destructive: #8b1a1a;
+  --destructive-foreground: #fafafa;
+  --border: #2a2a2a;
+  --input: #1f1f1f;
+  --ring: #d4af37;
+  --chart-1: #d4af37;
+  --chart-2: #2dd4bf;
+  --chart-3: #a855f7;
+  --chart-4: #8b1a1a;
+  --chart-5: #fafafa;
+  --radius: 0.5rem;
+  --sidebar: #0f0f0f;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #d4af37;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1f1f1f;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #2a2a2a;
+  --sidebar-ring: #d4af37;
+  
+  /* Custom Lokocontent tokens */
+  --loko-gold: #d4af37;
+  --loko-deep-red: #8b1a1a;
+  --loko-teal: #2dd4bf;
+  --loko-purple: #a855f7;
+  --loko-surface: #141414;
+  --loko-surface-elevated: #1a1a1a;
+}
+ 
+.dark {
+  --background: #0a0a0a; /* Retained user's background */
+  --foreground: #fafafa; /* Retained user's foreground */
+  --card: #141414; /* Retained user's card */
+  --card-foreground: #fafafa; /* Retained user's card-foreground */
+  --popover: #1a1a1a; /* Retained user's popover */
+  --popover-foreground: #fafafa; /* Retained user's popover-foreground */
+  --primary: #d4af37; /* Retained user's primary */
+  --primary-foreground: #0a0a0a; /* Retained user's primary-foreground */
+  --secondary: #1f1f1f; /* Retained user's secondary */
+  --secondary-foreground: #fafafa; /* Retained user's secondary-foreground */
+  --muted: #262626; /* Retained user's muted */
+  --muted-foreground: #a1a1a1; /* Retained user's muted-foreground */
+  --accent: #2dd4bf; /* Retained user's accent */
+  --accent-foreground: #0a0a0a; /* Retained user's accent-foreground */
+  --destructive: #8b1a1a; /* Retained user's destructive */
+  --destructive-foreground: #fafafa; /* Retained user's destructive-foreground */
+  --border: #2a2a2a; /* Retained user's border */
+  --input: #1f1f1f; /* Retained user's input */
+  --ring: #d4af37; /* Retained user's ring */
+  --chart-1: #d4af37; /* Retained user's chart-1 */
+  --chart-2: #2dd4bf; /* Retained user's chart-2 */
+  --chart-3: #a855f7; /* Retained user's chart-3 */
+  --chart-4: #8b1a1a; /* Retained user's chart-4 */
+  --chart-5: #fafafa; /* Retained user's chart-5 */
+  --sidebar: #0f0f0f; /* Retained user's sidebar */
+  --sidebar-foreground: #fafafa; /* Retained user's sidebar-foreground */
+  --sidebar-primary: #d4af37; /* Retained user's sidebar-primary */
+  --sidebar-primary-foreground: #0a0a0a; /* Retained user's sidebar-primary-foreground */
+  --sidebar-accent: #1f1f1f; /* Retained user's sidebar-accent */
+  --sidebar-accent-foreground: #fafafa; /* Retained user's sidebar-accent-foreground */
+  --sidebar-border: #2a2a2a; /* Retained user's sidebar-border */
+  --sidebar-ring: #d4af37; /* Retained user's sidebar-ring */
+}
+
+@theme inline {
+  --font-sans: 'Inter', 'Geist', 'Geist Fallback', sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Lokocontent custom colors */
+  --color-loko-gold: var(--loko-gold);
+  --color-loko-deep-red: var(--loko-deep-red);
+  --color-loko-teal: var(--loko-teal);
+  --color-loko-purple: var(--loko-purple);
+  --color-loko-surface: var(--loko-surface);
+  --color-loko-surface-elevated: var(--loko-surface-elevated);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Tribal pattern overlay */
+.tribal-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Premium unlock button shimmer effect */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-effect {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 175, 55, 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Gradient border animation */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.gradient-border {
+  position: relative;
+  background: linear-gradient(135deg, #d4af37, #8b1a1a, #d4af37);
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Glow effect */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.4), 0 0 40px rgba(212, 175, 55, 0.2);
+}
+
+.glow-gold-hover:hover {
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.6), 0 0 60px rgba(212, 175, 55, 0.3);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
