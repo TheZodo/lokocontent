@@ -1,0 +1,239 @@
+// Lokocontent Database Schema
+// Pan-African video streaming marketplace
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum Role {
+  VIEWER // Can browse and purchase content
+  CREATOR // Can upload and monetize content
+  ADMIN // Platform administration
+}
+
+enum PayoutMethod {
+  BANK
+  MOBILE_MONEY
+  PAYPAL
+}
+
+enum ContentStatus {
+  DRAFT // Only visible to creator
+  PROCESSING // Video being processed by MUX
+  PUBLISHED // Publicly visible and searchable
+  HIDDEN // Removed from public but accessible to purchasers
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYSTACK
+  FLUTTERWAVE
+}
+
+enum PurchaseStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+}
+
+// =============================================================================
+// MODELS
+// =============================================================================
+
+/// User model - Maps to Clerk users
+/// ID is the Clerk user ID (e.g., "user_2abc123...")
+model User {
+  id        String   @id // Clerk user ID - NOT a UUID
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Profile
+  displayName    String?
+  profilePicture String?
+  bio            String?
+
+  // Roles - PostgreSQL array, users can have multiple roles
+  roles Role[] @default([VIEWER])
+
+  // Notification Settings
+  emailNotifications         Boolean @default(true)
+  newFollowerNotifications   Boolean @default(true)
+  contentUpdateNotifications Boolean @default(true)
+  earningsNotifications      Boolean @default(true)
+  watchHistoryEnabled        Boolean @default(true)
+
+  // Payout Settings (for creators)
+  payoutMethod  PayoutMethod?
+  payoutDetails Json? // Encrypted payment details (bank, mobile money, or PayPal info)
+
+  // Relations
+  content      VideoContent[] @relation("CreatorContent")
+  purchases    Purchase[]
+  watchHistory WatchHistory[]
+  ratings      Rating[]
+  followers    Follow[]       @relation("Following") // Users who follow this user
+  following    Follow[]       @relation("Followers") // Users this user follows
+
+  @@index([email])
+  @@index([roles])
+}
+
+/// VideoContent model - MUX-integrated video content
+model VideoContent {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  // Creator relationship
+  creatorId String
+  creator   User   @relation("CreatorContent", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Content metadata
+  title       String
+  synopsis    String  @db.Text
+  thumbnail   String // URL to stored image
+  duration    String? // e.g., "1h 45m"
+  releaseYear Int?
+
+  // Categorization
+  region   String // Region ID (e.g., "nollywood", "riverwood")
+  category String // Category ID (e.g., "drama", "comedy")
+
+  // Ratings (denormalized for performance)
+  rating      Float @default(0) // Average rating 0-5
+  ratingCount Int   @default(0) // Number of ratings
+
+  // Monetization
+  isPremium Boolean @default(false)
+  price     Float? // Price in USD if premium
+
+  // View count
+  views Int @default(0)
+
+  // MUX Video Data
+  muxAssetId    String?
+  muxPlaybackId String?
+
+  // Optional Trailer
+  trailerMuxAssetId    String?
+  trailerMuxPlaybackId String?
+
+  // Status
+  status ContentStatus @default(DRAFT)
+
+  // Relations
+  purchases    Purchase[]
+  watchHistory WatchHistory[]
+  ratings      Rating[]
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([region])
+  @@index([category])
+  @@index([isPremium])
+  @@index([createdAt])
+  @@index([views])
+}
+
+/// Purchase model - Records of content purchases
+model Purchase {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // User who purchased
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Content purchased
+  contentId String
+  content   VideoContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  // Payment details
+  amount          Float // Amount paid in USD
+  platformFee     Float // Platform's cut (15%)
+  creatorEarnings Float // Creator's share (85%)
+  paymentProvider PaymentProvider
+  paymentId       String // External payment reference from provider
+
+  // Status
+  status PurchaseStatus @default(PENDING)
+
+  @@unique([userId, contentId]) // User can only purchase content once
+  @@index([userId])
+  @@index([contentId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// WatchHistory model - Tracks user watch progress
+model WatchHistory {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User watching
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Content being watched
+  contentId String
+  content   VideoContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  // Progress
+  progress      Int      @default(0) // 0-100 percentage
+  lastWatchedAt DateTime @default(now())
+
+  @@unique([userId, contentId]) // One history entry per user per content
+  @@index([userId])
+  @@index([lastWatchedAt])
+}
+
+/// Follow model - Social following relationships
+model Follow {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // User who is following
+  followerId String
+  follower   User   @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+
+  // User being followed
+  followingId String
+  following   User   @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId]) // Can only follow once
+  @@index([followerId])
+  @@index([followingId])
+}
+
+/// Rating model - User ratings for content
+model Rating {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User who rated
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Content being rated
+  contentId String
+  content   VideoContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  // Rating value (1-5)
+  rating Int
+
+  @@unique([userId, contentId]) // One rating per user per content
+  @@index([contentId])
+}

@@ -2,10 +2,17 @@
   "name": "lokocontent",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter ./apps/web dev",
-    "build": "pnpm --filter ./apps/web build",
-    "lint": "pnpm --filter ./apps/web lint",
-    "start": "pnpm --filter ./apps/web start"
+    "dev": "turbo run dev",
+    "dev:web": "pnpm --filter @lokocontent/web dev",
+    "dev:api": "pnpm --filter @lokocontent/api dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "start": "pnpm --filter @lokocontent/web start",
+    "db:generate": "pnpm --filter @lokocontent/db generate",
+    "db:migrate": "pnpm --filter @lokocontent/db migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @lokocontent/db migrate:deploy",
+    "db:push": "pnpm --filter @lokocontent/db db:push",
+    "db:studio": "pnpm --filter @lokocontent/db db:studio"
   },
   "devDependencies": {
     "turbo": "^2.7.6"
