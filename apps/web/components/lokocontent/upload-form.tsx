@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import type React from "react";
-import { useState, useRef } from "react";
+import type React from 'react'
+import { useState, useRef } from 'react'
 import {
   Upload,
   Film,
@@ -16,164 +16,164 @@ import {
   Tag,
   FileText,
   Clock,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { regions, categories } from "@/lib/lokocontent-data";
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { regions, categories } from '@/lib/lokocontent-data'
 
-type UploadStatus = "idle" | "uploading" | "processing" | "complete" | "error";
+type UploadStatus = 'idle' | 'uploading' | 'processing' | 'complete' | 'error'
 
 interface FileUpload {
-  file: File | null;
-  preview: string | null;
-  status: UploadStatus;
-  progress: number;
-  muxAssetId?: string;
-  muxPlaybackId?: string;
+  file: File | null
+  preview: string | null
+  status: UploadStatus
+  progress: number
+  muxAssetId?: string
+  muxPlaybackId?: string
 }
 
 interface UploadFormData {
-  title: string;
-  synopsis: string;
-  region: string;
-  category: string;
-  isPremium: boolean;
-  price: string;
-  releaseYear: string;
+  title: string
+  synopsis: string
+  region: string
+  category: string
+  isPremium: boolean
+  price: string
+  releaseYear: string
 }
 
 // Stub functions for MUX integration
 async function uploadToMux(
   file: File,
-  onProgress: (progress: number) => void
+  onProgress: (progress: number) => void,
 ): Promise<{ assetId: string; playbackId: string }> {
   // Simulate upload progress
   for (let i = 0; i <= 100; i += 10) {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    onProgress(i);
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    onProgress(i)
   }
   // Return mock MUX asset IDs
   return {
     assetId: `mux-asset-${Date.now()}`,
     playbackId: `mux-playback-${Date.now()}`,
-  };
+  }
 }
 
 async function uploadThumbnail(file: File): Promise<string> {
   // Simulate thumbnail upload
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  return URL.createObjectURL(file);
+  await new Promise((resolve) => setTimeout(resolve, 1000))
+  return URL.createObjectURL(file)
 }
 
 export function UploadForm() {
   const [formData, setFormData] = useState<UploadFormData>({
-    title: "",
-    synopsis: "",
-    region: "",
-    category: "",
+    title: '',
+    synopsis: '',
+    region: '',
+    category: '',
     isPremium: false,
-    price: "",
+    price: '',
     releaseYear: new Date().getFullYear().toString(),
-  });
+  })
 
   const [mainVideo, setMainVideo] = useState<FileUpload>({
     file: null,
     preview: null,
-    status: "idle",
+    status: 'idle',
     progress: 0,
-  });
+  })
 
   const [thumbnail, setThumbnail] = useState<FileUpload>({
     file: null,
     preview: null,
-    status: "idle",
+    status: 'idle',
     progress: 0,
-  });
+  })
 
   const [trailer, setTrailer] = useState<FileUpload>({
     file: null,
     preview: null,
-    status: "idle",
+    status: 'idle',
     progress: 0,
-  });
+  })
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<
-    "idle" | "success" | "error"
-  >("idle");
+    'idle' | 'success' | 'error'
+  >('idle')
 
-  const mainVideoRef = useRef<HTMLInputElement>(null);
-  const thumbnailRef = useRef<HTMLInputElement>(null);
-  const trailerRef = useRef<HTMLInputElement>(null);
+  const mainVideoRef = useRef<HTMLInputElement>(null)
+  const thumbnailRef = useRef<HTMLInputElement>(null)
+  const trailerRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    type: "video" | "thumbnail" | "trailer"
+    type: 'video' | 'thumbnail' | 'trailer',
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]
+    if (!file) return
 
-    const preview = URL.createObjectURL(file);
+    const preview = URL.createObjectURL(file)
 
-    if (type === "video") {
-      setMainVideo({ file, preview, status: "uploading", progress: 0 });
+    if (type === 'video') {
+      setMainVideo({ file, preview, status: 'uploading', progress: 0 })
       try {
         const result = await uploadToMux(file, (progress) => {
-          setMainVideo((prev) => ({ ...prev, progress }));
-        });
+          setMainVideo((prev) => ({ ...prev, progress }))
+        })
         setMainVideo((prev) => ({
           ...prev,
-          status: "complete",
+          status: 'complete',
           muxAssetId: result.assetId,
           muxPlaybackId: result.playbackId,
-        }));
+        }))
       } catch {
-        setMainVideo((prev) => ({ ...prev, status: "error" }));
+        setMainVideo((prev) => ({ ...prev, status: 'error' }))
       }
-    } else if (type === "thumbnail") {
-      setThumbnail({ file, preview, status: "uploading", progress: 0 });
+    } else if (type === 'thumbnail') {
+      setThumbnail({ file, preview, status: 'uploading', progress: 0 })
       try {
-        await uploadThumbnail(file);
-        setThumbnail((prev) => ({ ...prev, status: "complete", progress: 100 }));
+        await uploadThumbnail(file)
+        setThumbnail((prev) => ({ ...prev, status: 'complete', progress: 100 }))
       } catch {
-        setThumbnail((prev) => ({ ...prev, status: "error" }));
+        setThumbnail((prev) => ({ ...prev, status: 'error' }))
       }
-    } else if (type === "trailer") {
-      setTrailer({ file, preview, status: "uploading", progress: 0 });
+    } else if (type === 'trailer') {
+      setTrailer({ file, preview, status: 'uploading', progress: 0 })
       try {
         const result = await uploadToMux(file, (progress) => {
-          setTrailer((prev) => ({ ...prev, progress }));
-        });
+          setTrailer((prev) => ({ ...prev, progress }))
+        })
         setTrailer((prev) => ({
           ...prev,
-          status: "complete",
+          status: 'complete',
           muxAssetId: result.assetId,
           muxPlaybackId: result.playbackId,
-        }));
+        }))
       } catch {
-        setTrailer((prev) => ({ ...prev, status: "error" }));
+        setTrailer((prev) => ({ ...prev, status: 'error' }))
       }
     }
-  };
+  }
 
-  const removeFile = (type: "video" | "thumbnail" | "trailer") => {
+  const removeFile = (type: 'video' | 'thumbnail' | 'trailer') => {
     const emptyState: FileUpload = {
       file: null,
       preview: null,
-      status: "idle",
+      status: 'idle',
       progress: 0,
-    };
-    if (type === "video") setMainVideo(emptyState);
-    else if (type === "thumbnail") setThumbnail(emptyState);
-    else setTrailer(emptyState);
-  };
+    }
+    if (type === 'video') setMainVideo(emptyState)
+    else if (type === 'thumbnail') setThumbnail(emptyState)
+    else setTrailer(emptyState)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mainVideo.file || mainVideo.status !== "complete") return;
+    e.preventDefault()
+    if (!mainVideo.file || mainVideo.status !== 'complete') return
 
-    setIsSubmitting(true);
-    setSubmitStatus("idle");
+    setIsSubmitting(true)
+    setSubmitStatus('idle')
 
     try {
       // Stub: Send data to NestJS backend
@@ -184,27 +184,27 @@ export function UploadForm() {
         thumbnailUrl: thumbnail.preview,
         trailerAssetId: trailer.muxAssetId,
         trailerPlaybackId: trailer.muxPlaybackId,
-      };
+      }
 
-      console.log("[v0] Upload payload:", payload);
+      console.log('[v0] Upload payload:', payload)
 
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      setSubmitStatus("success");
+      setSubmitStatus('success')
     } catch {
-      setSubmitStatus("error");
+      setSubmitStatus('error')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const isFormValid =
     formData.title &&
     formData.synopsis &&
     formData.region &&
     formData.category &&
-    mainVideo.status === "complete";
+    mainVideo.status === 'complete'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -220,7 +220,7 @@ export function UploadForm() {
             accept="video/*"
             file={mainVideo}
             onSelect={() => mainVideoRef.current?.click()}
-            onRemove={() => removeFile("video")}
+            onRemove={() => removeFile('video')}
             placeholder="Drag and drop your video here, or click to browse"
             subtext="MP4, MOV, MKV up to 10GB"
           />
@@ -229,7 +229,7 @@ export function UploadForm() {
             type="file"
             accept="video/*"
             className="hidden"
-            onChange={(e) => handleFileSelect(e, "video")}
+            onChange={(e) => handleFileSelect(e, 'video')}
           />
         </div>
 
@@ -243,7 +243,7 @@ export function UploadForm() {
             accept="image/*"
             file={thumbnail}
             onSelect={() => thumbnailRef.current?.click()}
-            onRemove={() => removeFile("thumbnail")}
+            onRemove={() => removeFile('thumbnail')}
             placeholder="Upload cover image"
             subtext="JPG, PNG, WebP (16:9 ratio)"
             isImage
@@ -253,7 +253,7 @@ export function UploadForm() {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => handleFileSelect(e, "thumbnail")}
+            onChange={(e) => handleFileSelect(e, 'thumbnail')}
           />
         </div>
       </div>
@@ -268,7 +268,7 @@ export function UploadForm() {
           accept="video/*"
           file={trailer}
           onSelect={() => trailerRef.current?.click()}
-          onRemove={() => removeFile("trailer")}
+          onRemove={() => removeFile('trailer')}
           placeholder="Upload a trailer to attract viewers"
           subtext="30 seconds to 3 minutes recommended"
         />
@@ -277,7 +277,7 @@ export function UploadForm() {
           type="file"
           accept="video/*"
           className="hidden"
-          onChange={(e) => handleFileSelect(e, "trailer")}
+          onChange={(e) => handleFileSelect(e, 'trailer')}
         />
       </div>
 
@@ -341,9 +341,13 @@ export function UploadForm() {
                 Select a region
               </option>
               {regions
-                .filter((r) => r.id !== "all")
+                .filter((r) => r.id !== 'all')
                 .map((region) => (
-                  <option key={region.id} value={region.id} className="bg-popover">
+                  <option
+                    key={region.id}
+                    value={region.id}
+                    className="bg-popover"
+                  >
                     {region.flag} {region.name}
                   </option>
                 ))}
@@ -368,9 +372,13 @@ export function UploadForm() {
                 Select a category
               </option>
               {categories
-                .filter((c) => c.id !== "all")
+                .filter((c) => c.id !== 'all')
                 .map((category) => (
-                  <option key={category.id} value={category.id} className="bg-popover">
+                  <option
+                    key={category.id}
+                    value={category.id}
+                    className="bg-popover"
+                  >
                     {category.name}
                   </option>
                 ))}
@@ -406,10 +414,10 @@ export function UploadForm() {
                 type="button"
                 onClick={() => setFormData({ ...formData, isPremium: false })}
                 className={cn(
-                  "flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all",
+                  'flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all',
                   !formData.isPremium
-                    ? "bg-loko-teal text-background"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                    ? 'bg-loko-teal text-background'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground',
                 )}
               >
                 Free
@@ -418,10 +426,10 @@ export function UploadForm() {
                 type="button"
                 onClick={() => setFormData({ ...formData, isPremium: true })}
                 className={cn(
-                  "flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all",
+                  'flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all',
                   formData.isPremium
-                    ? "bg-loko-gold text-background"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                    ? 'bg-loko-gold text-background'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground',
                 )}
               >
                 Premium
@@ -462,13 +470,13 @@ export function UploadForm() {
       {/* Submit Button */}
       <div className="border-t border-border pt-8 flex items-center justify-between">
         <div>
-          {submitStatus === "success" && (
+          {submitStatus === 'success' && (
             <p className="text-loko-teal flex items-center gap-2">
               <Check className="w-4 h-4" />
               Content uploaded successfully!
             </p>
           )}
-          {submitStatus === "error" && (
+          {submitStatus === 'error' && (
             <p className="text-destructive flex items-center gap-2">
               <AlertCircle className="w-4 h-4" />
               Upload failed. Please try again.
@@ -479,7 +487,7 @@ export function UploadForm() {
         <Button
           type="submit"
           disabled={!isFormValid || isSubmitting}
-          className="bg-gradient-to-r from-loko-gold to-loko-deep-red hover:from-loko-gold/90 hover:to-loko-deep-red/90 text-foreground font-semibold px-8 py-6 glow-gold-hover transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-linear-to-r from-loko-gold to-loko-deep-red hover:from-loko-gold/90 hover:to-loko-deep-red/90 text-foreground font-semibold px-8 py-6 glow-gold-hover transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <>
@@ -495,18 +503,18 @@ export function UploadForm() {
         </Button>
       </div>
     </form>
-  );
+  )
 }
 
 // Upload Zone Component
 interface UploadZoneProps {
-  accept: string;
-  file: FileUpload;
-  onSelect: () => void;
-  onRemove: () => void;
-  placeholder: string;
-  subtext: string;
-  isImage?: boolean;
+  accept: string
+  file: FileUpload
+  onSelect: () => void
+  onRemove: () => void
+  placeholder: string
+  subtext: string
+  isImage?: boolean
 }
 
 function UploadZone({
@@ -517,22 +525,22 @@ function UploadZone({
   subtext,
   isImage,
 }: UploadZoneProps) {
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging] = useState(false)
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
+    e.preventDefault()
+    setIsDragging(true)
+  }
 
   const handleDragLeave = () => {
-    setIsDragging(false);
-  };
+    setIsDragging(false)
+  }
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
+    e.preventDefault()
+    setIsDragging(false)
     // Note: File handling would go through the parent's input change handler
-  };
+  }
 
   if (file.file) {
     return (
@@ -541,7 +549,7 @@ function UploadZone({
         <div className="aspect-video relative">
           {isImage && file.preview ? (
             <img
-              src={file.preview || "/placeholder.svg"}
+              src={file.preview || '/placeholder.svg'}
               alt="Thumbnail preview"
               className="w-full h-full object-cover"
             />
@@ -552,15 +560,15 @@ function UploadZone({
           )}
 
           {/* Progress Overlay */}
-          {(file.status === "uploading" || file.status === "processing") && (
+          {(file.status === 'uploading' || file.status === 'processing') && (
             <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-loko-gold animate-spin mb-3" />
               <p className="text-sm text-foreground mb-2">
-                {file.status === "uploading" ? "Uploading..." : "Processing..."}
+                {file.status === 'uploading' ? 'Uploading...' : 'Processing...'}
               </p>
               <div className="w-48 h-2 bg-secondary rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-loko-gold to-loko-teal transition-all duration-300"
+                  className="h-full bg-linear-to-r from-loko-gold to-loko-teal transition-all duration-300"
                   style={{ width: `${file.progress}%` }}
                 />
               </div>
@@ -571,7 +579,7 @@ function UploadZone({
           )}
 
           {/* Complete Badge */}
-          {file.status === "complete" && (
+          {file.status === 'complete' && (
             <div className="absolute top-3 right-3 px-3 py-1 bg-loko-teal/90 text-background text-xs font-medium rounded-full flex items-center gap-1">
               <Check className="w-3 h-3" />
               Uploaded
@@ -579,7 +587,7 @@ function UploadZone({
           )}
 
           {/* Error Badge */}
-          {file.status === "error" && (
+          {file.status === 'error' && (
             <div className="absolute top-3 right-3 px-3 py-1 bg-destructive/90 text-foreground text-xs font-medium rounded-full flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
               Error
@@ -605,7 +613,7 @@ function UploadZone({
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -616,22 +624,22 @@ function UploadZone({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        "w-full aspect-video rounded-xl border-2 border-dashed transition-all duration-200 flex flex-col items-center justify-center gap-3 text-center p-6",
+        'w-full aspect-video rounded-xl border-2 border-dashed transition-all duration-200 flex flex-col items-center justify-center gap-3 text-center p-6',
         isDragging
-          ? "border-loko-gold bg-loko-gold/5"
-          : "border-border hover:border-loko-gold/50 hover:bg-loko-surface"
+          ? 'border-loko-gold bg-loko-gold/5'
+          : 'border-border hover:border-loko-gold/50 hover:bg-loko-surface',
       )}
     >
       <div
         className={cn(
-          "w-14 h-14 rounded-full flex items-center justify-center transition-colors",
-          isDragging ? "bg-loko-gold/20" : "bg-secondary"
+          'w-14 h-14 rounded-full flex items-center justify-center transition-colors',
+          isDragging ? 'bg-loko-gold/20' : 'bg-secondary',
         )}
       >
         <Upload
           className={cn(
-            "w-6 h-6",
-            isDragging ? "text-loko-gold" : "text-muted-foreground"
+            'w-6 h-6',
+            isDragging ? 'text-loko-gold' : 'text-muted-foreground',
           )}
         />
       </div>
@@ -640,5 +648,5 @@ function UploadZone({
         <p className="text-xs text-muted-foreground mt-1">{subtext}</p>
       </div>
     </button>
-  );
+  )
 }
