@@ -5,6 +5,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import { json } from 'express'
+import { ApiExceptionFilter } from './common/filters/api-exception.filter'
+import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -49,6 +51,10 @@ async function bootstrap() {
       transform: true,
     }),
   )
+
+  // Global response wrapper + error mapper
+  app.useGlobalInterceptors(new ApiResponseInterceptor())
+  app.useGlobalFilters(new ApiExceptionFilter())
 
   // Global API prefix - all routes will be under /api
   app.setGlobalPrefix('api')
