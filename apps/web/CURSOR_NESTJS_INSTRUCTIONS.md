@@ -11,16 +11,18 @@ Lokocontent is a Netflix/YouTube hybrid video streaming platform focused on Afri
 ## Authentication & Authorization
 
 ### Provider
+
 - **Clerk** - Authentication is handled by Clerk on the frontend
 - Backend must validate Clerk JWT tokens
 - Use Clerk's webhook for user sync
 
 ### User Roles
+
 ```typescript
 enum UserRole {
-  VIEWER = 'viewer',        // Can browse and purchase content
-  CREATOR = 'creator',      // Can upload and monetize content
-  ADMIN = 'admin'           // Platform administration
+  VIEWER = 'viewer', // Can browse and purchase content
+  CREATOR = 'creator', // Can upload and monetize content
+  ADMIN = 'admin', // Platform administration
 }
 ```
 
@@ -29,112 +31,118 @@ enum UserRole {
 ## Database Schema
 
 ### Users Table
+
 ```typescript
 interface User {
-  id: string;                    // Clerk user ID
-  email: string;
-  displayName: string;
-  profilePicture: string | null;
-  bio: string | null;
-  role: UserRole;
-  createdAt: Date;
-  updatedAt: Date;
-  
+  id: string // Clerk user ID
+  email: string
+  displayName: string
+  profilePicture: string | null
+  bio: string | null
+  role: UserRole
+  createdAt: Date
+  updatedAt: Date
+
   // Settings
-  emailNotifications: boolean;
-  newFollowerNotifications: boolean;
-  contentUpdateNotifications: boolean;
-  earningsNotifications: boolean;
-  watchHistoryEnabled: boolean;
-  
+  emailNotifications: boolean
+  newFollowerNotifications: boolean
+  contentUpdateNotifications: boolean
+  earningsNotifications: boolean
+  watchHistoryEnabled: boolean
+
   // Payment info
-  payoutMethod: 'bank' | 'mobile_money' | 'paypal' | null;
-  payoutDetails: JSON | null;   // Encrypted payment details
+  payoutMethod: 'bank' | 'mobile_money' | 'paypal' | null
+  payoutDetails: JSON | null // Encrypted payment details
 }
 ```
 
 ### VideoContent Table
+
 ```typescript
 interface VideoContent {
-  id: string;                    // UUID
-  creatorId: string;             // FK to Users
-  title: string;
-  synopsis: string;
-  thumbnail: string;             // URL to stored image
-  duration: string;              // e.g., "1h 45m"
-  rating: number;                // Average rating 0-5
-  ratingCount: number;           // Number of ratings
-  isPremium: boolean;
-  price: number | null;          // Price in USD if premium
-  region: string;                // Region ID
-  category: string;              // Category ID
-  releaseYear: number;
-  views: number;
-  
+  id: string // UUID
+  creatorId: string // FK to Users
+  title: string
+  synopsis: string
+  thumbnail: string // URL to stored image
+  duration: string // e.g., "1h 45m"
+  rating: number // Average rating 0-5
+  ratingCount: number // Number of ratings
+  isPremium: boolean
+  price: number | null // Price in USD if premium
+  region: string // Region ID
+  category: string // Category ID
+  releaseYear: number
+  views: number
+
   // MUX Video Data
-  muxAssetId: string;
-  muxPlaybackId: string;
-  
+  muxAssetId: string
+  muxPlaybackId: string
+
   // Optional Trailer
-  trailerMuxAssetId: string | null;
-  trailerMuxPlaybackId: string | null;
-  
+  trailerMuxAssetId: string | null
+  trailerMuxPlaybackId: string | null
+
   // Status
-  status: 'draft' | 'processing' | 'published' | 'hidden';
-  
-  createdAt: Date;
-  updatedAt: Date;
+  status: 'draft' | 'processing' | 'published' | 'hidden'
+
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
 ### Purchases Table
+
 ```typescript
 interface Purchase {
-  id: string;
-  userId: string;                // FK to Users
-  contentId: string;             // FK to VideoContent
-  amount: number;                // Amount paid
-  platformFee: number;           // Platform's cut (15%)
-  creatorEarnings: number;       // Creator's share (85%)
-  paymentProvider: string;       // 'stripe', 'paystack', 'flutterwave'
-  paymentId: string;             // External payment reference
-  status: 'pending' | 'completed' | 'refunded';
-  createdAt: Date;
+  id: string
+  userId: string // FK to Users
+  contentId: string // FK to VideoContent
+  amount: number // Amount paid
+  platformFee: number // Platform's cut (15%)
+  creatorEarnings: number // Creator's share (85%)
+  paymentProvider: string // 'stripe', 'paystack', 'flutterwave'
+  paymentId: string // External payment reference
+  status: 'pending' | 'completed' | 'refunded'
+  createdAt: Date
 }
 ```
 
 ### WatchHistory Table
+
 ```typescript
 interface WatchHistory {
-  id: string;
-  userId: string;                // FK to Users
-  contentId: string;             // FK to VideoContent
-  progress: number;              // 0-100 percentage
-  lastWatchedAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  userId: string // FK to Users
+  contentId: string // FK to VideoContent
+  progress: number // 0-100 percentage
+  lastWatchedAt: Date
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
 ### Follows Table
+
 ```typescript
 interface Follow {
-  id: string;
-  followerId: string;            // FK to Users (who is following)
-  followingId: string;           // FK to Users (who is being followed)
-  createdAt: Date;
+  id: string
+  followerId: string // FK to Users (who is following)
+  followingId: string // FK to Users (who is being followed)
+  createdAt: Date
 }
 ```
 
 ### Ratings Table
+
 ```typescript
 interface Rating {
-  id: string;
-  userId: string;
-  contentId: string;
-  rating: number;                // 1-5
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  userId: string
+  contentId: string
+  rating: number // 1-5
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
@@ -143,6 +151,7 @@ interface Rating {
 ## Static Data (Can be config or DB)
 
 ### Regions
+
 ```typescript
 const regions = [
   { id: 'all', name: 'All Regions', flag: '🌍' },
@@ -152,10 +161,11 @@ const regions = [
   { id: 'ghana', name: 'Ghana', flag: '🇬🇭' },
   { id: 'tanzania', name: 'Tanzania', flag: '🇹🇿' },
   { id: 'uganda', name: 'Uganda', flag: '🇺🇬' },
-];
+]
 ```
 
 ### Categories
+
 ```typescript
 const categories = [
   { id: 'all', name: 'All' },
@@ -165,7 +175,7 @@ const categories = [
   { id: 'comedy', name: 'Comedy' },
   { id: 'music-videos', name: 'Music Videos' },
   { id: 'animation', name: 'Animation' },
-];
+]
 ```
 
 ---
@@ -175,54 +185,67 @@ const categories = [
 ### Content Discovery
 
 #### GET /api/content/featured
+
 Returns featured content for homepage carousel.
+
 ```typescript
 Response: VideoContent[] (limit: 5)
 ```
 
 #### GET /api/content/trending
+
 Returns trending content sorted by views/engagement.
+
 ```typescript
 Query: { region?: string, category?: string, limit?: number, offset?: number }
 Response: { data: VideoContent[], total: number }
 ```
 
 #### GET /api/content/new-releases
+
 Returns newly published content.
+
 ```typescript
 Query: { region?: string, category?: string, limit?: number, offset?: number }
 Response: { data: VideoContent[], total: number }
 ```
 
 #### GET /api/content/search
+
 Search content by title, creator, synopsis.
+
 ```typescript
-Query: { 
+Query: {
   q: string,              // Search query
   region?: string,
   category?: string,
   isPremium?: boolean,
   sortBy?: 'recent' | 'views' | 'rating',
   limit?: number,
-  offset?: number 
+  offset?: number
 }
 Response: { data: VideoContent[], total: number }
 ```
 
 #### GET /api/content/:id
+
 Get single content details.
+
 ```typescript
-Response: VideoContent & {
-  creator: { id: string, displayName: string, profilePicture: string },
-  isOwned: boolean,       // If user has purchased (when authenticated)
-  userRating: number | null
-}
+Response: VideoContent &
+  {
+    creator: { id: string, displayName: string, profilePicture: string },
+    isOwned: boolean, // If user has purchased (when authenticated)
+    userRating: number | null,
+  }
 ```
 
 ### Content Management (Creator)
 
 #### POST /api/content
+
 Create new content (requires creator role).
+
 ```typescript
 Body: {
   title: string;
@@ -243,19 +266,23 @@ Response: VideoContent
 ```
 
 #### GET /api/content/my-uploads
+
 Get creator's uploaded content.
+
 ```typescript
 Query: { status?: string, sortBy?: string, limit?: number, offset?: number }
-Response: { 
-  data: (VideoContent & { earnings: number })[], 
+Response: {
+  data: (VideoContent & { earnings: number })[],
   total: number,
   totalViews: number,
-  totalEarnings: number 
+  totalEarnings: number
 }
 ```
 
 #### PATCH /api/content/:id
+
 Update content (requires ownership).
+
 ```typescript
 Body: {
   title?: string;
@@ -269,12 +296,15 @@ Response: VideoContent
 ```
 
 #### DELETE /api/content/:id
+
 Delete content (requires ownership, soft delete).
 
 ### Content Edit Analysis (LLM Integration)
 
 #### POST /api/content/:id/analyze-changes
+
 Analyze proposed changes using LLM to detect major modifications.
+
 ```typescript
 Body: {
   title?: string;
@@ -292,6 +322,7 @@ Response: {
 ```
 
 **Implementation Notes:**
+
 - Use an LLM (GPT-4, Claude, etc.) to analyze:
   - Title similarity (detect misleading title changes)
   - Synopsis semantic similarity (ensure content still matches description)
@@ -305,16 +336,20 @@ Response: {
 ### MUX Integration
 
 #### POST /api/mux/upload-url
+
 Get direct upload URL for MUX.
+
 ```typescript
 Response: {
-  uploadUrl: string;       // MUX direct upload URL
-  uploadId: string;
+  uploadUrl: string // MUX direct upload URL
+  uploadId: string
 }
 ```
 
 #### POST /api/mux/webhook
+
 MUX webhook endpoint for upload status updates.
+
 ```typescript
 Events to handle:
 - video.asset.ready
@@ -323,46 +358,56 @@ Events to handle:
 ```
 
 #### GET /api/mux/playback/:playbackId
+
 Get signed playback URL (for premium content verification).
+
 ```typescript
 Response: {
-  playbackUrl: string;     // Signed MUX playback URL
-  expiresAt: Date;
+  playbackUrl: string // Signed MUX playback URL
+  expiresAt: Date
 }
 ```
 
 ### Thumbnail Storage
 
 #### POST /api/upload/thumbnail
+
 Upload thumbnail image.
+
 ```typescript
 Body: FormData with 'file' field
 Response: {
   url: string;             // Stored image URL
 }
 ```
+
 **Note:** Use cloud storage (S3, Cloudinary, Vercel Blob, etc.)
 
 ### Purchases & Payments
 
 #### POST /api/purchases
+
 Initiate content purchase.
+
 ```typescript
 Body: {
-  contentId: string;
-  paymentProvider: 'stripe' | 'paystack' | 'flutterwave';
+  contentId: string
+  paymentProvider: 'stripe' | 'paystack' | 'flutterwave'
 }
 Response: {
-  purchaseId: string;
-  checkoutUrl: string;     // Redirect to payment provider
+  purchaseId: string
+  checkoutUrl: string // Redirect to payment provider
 }
 ```
 
 #### POST /api/purchases/webhook/:provider
+
 Payment provider webhooks (Stripe, Paystack, Flutterwave).
 
 #### GET /api/purchases/my-purchases
+
 Get user's purchased content.
+
 ```typescript
 Response: {
   data: (Purchase & { content: VideoContent })[],
@@ -373,7 +418,9 @@ Response: {
 ### Watch History
 
 #### GET /api/history
+
 Get user's watch history.
+
 ```typescript
 Query: { limit?: number, offset?: number }
 Response: {
@@ -387,28 +434,40 @@ Response: {
 ```
 
 #### POST /api/history/:contentId
+
 Update watch progress.
+
 ```typescript
-Body: { progress: number }  // 0-100
-Response: { success: boolean }
+Body: {
+  progress: number
+} // 0-100
+Response: {
+  success: boolean
+}
 ```
 
 #### DELETE /api/history
+
 Clear all watch history.
 
 #### DELETE /api/history/:contentId
+
 Remove single item from history.
 
 ### User Profile
 
 #### GET /api/users/me
+
 Get current user profile.
+
 ```typescript
 Response: User
 ```
 
 #### PATCH /api/users/me
+
 Update user profile.
+
 ```typescript
 Body: {
   displayName?: string;
@@ -419,7 +478,9 @@ Response: User
 ```
 
 #### PATCH /api/users/me/settings
+
 Update user settings.
+
 ```typescript
 Body: {
   emailNotifications?: boolean;
@@ -432,7 +493,9 @@ Response: User
 ```
 
 #### PATCH /api/users/me/payout
+
 Update payout settings.
+
 ```typescript
 Body: {
   payoutMethod: 'bank' | 'mobile_money' | 'paypal';
@@ -454,19 +517,23 @@ Response: { success: boolean }
 ### Creator Analytics
 
 #### GET /api/analytics/overview
+
 Get creator's overall stats.
+
 ```typescript
 Response: {
-  totalViews: number;
-  totalEarnings: number;
-  totalContent: number;
-  averageRating: number;
-  followersCount: number;
+  totalViews: number
+  totalEarnings: number
+  totalContent: number
+  averageRating: number
+  followersCount: number
 }
 ```
 
 #### GET /api/analytics/earnings
+
 Get detailed earnings breakdown.
+
 ```typescript
 Query: { period: 'week' | 'month' | 'year' }
 Response: {
@@ -482,19 +549,25 @@ Response: {
 ### Follows
 
 #### POST /api/follows/:creatorId
+
 Follow a creator.
 
 #### DELETE /api/follows/:creatorId
+
 Unfollow a creator.
 
 #### GET /api/follows/following
+
 Get creators user is following.
+
 ```typescript
 Response: { data: User[], total: number }
 ```
 
 #### GET /api/follows/followers
+
 Get user's followers (for creators).
+
 ```typescript
 Response: { data: User[], total: number }
 ```
@@ -502,13 +575,16 @@ Response: { data: User[], total: number }
 ### Ratings
 
 #### POST /api/ratings/:contentId
+
 Rate content.
+
 ```typescript
 Body: { rating: number }  // 1-5
 Response: { averageRating: number, ratingCount: number }
 ```
 
 #### DELETE /api/ratings/:contentId
+
 Remove user's rating.
 
 ---
@@ -516,31 +592,23 @@ Remove user's rating.
 ## Third-Party Integrations
 
 ### MUX Video
+
 - Direct uploads for video files
 - Playback ID generation
 - Signed URLs for premium content
 - Webhook handling for processing status
 
 ### Payment Providers
-Support multiple providers for African markets:
 
-#### Stripe
-- International cards
-- Webhook: `payment_intent.succeeded`, `payment_intent.payment_failed`
-
-#### Paystack (Nigeria, Ghana, South Africa, Kenya)
-- Cards, bank transfers, mobile money
-- Webhook: `charge.success`
-
-#### Flutterwave (Pan-African)
-- Cards, mobile money, bank transfers
-- Webhook: `charge.completed`
+I'll use lipila for payments https://blaze-docs.lipila.dev/
 
 ### Cloud Storage
+
 - Thumbnail storage (S3, Cloudinary, or Vercel Blob)
 - Signed URLs for private content
 
 ### LLM Integration (Content Edit Analysis)
+
 - OpenAI GPT-4 or Anthropic Claude
 - Use for analyzing content changes
 - Detect potentially misleading edits
@@ -550,22 +618,27 @@ Support multiple providers for African markets:
 ## Business Logic
 
 ### Platform Fee
+
 - **Creator receives:** 85% of content price
 - **Platform fee:** 15%
 
 ### Content Visibility
+
 - **draft:** Only visible to creator
 - **processing:** Video being processed by MUX
 - **published:** Publicly visible and searchable
 - **hidden:** Removed from public but accessible to purchasers
 
 ### Premium Content Access
+
 - Check if user has purchased before allowing playback
 - Return signed MUX URL with expiration
 - Track watch progress only for authenticated users
 
 ### Trending Algorithm
+
 Consider:
+
 - Views in last 7 days (weighted heavily)
 - Recent purchases
 - Rating score
@@ -589,13 +662,7 @@ MUX_TOKEN_ID=
 MUX_TOKEN_SECRET=
 MUX_WEBHOOK_SECRET=
 
-# Payments
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-PAYSTACK_SECRET_KEY=
-PAYSTACK_WEBHOOK_SECRET=
-FLUTTERWAVE_SECRET_KEY=
-FLUTTERWAVE_WEBHOOK_SECRET=
+
 
 # Storage
 AWS_ACCESS_KEY_ID=
