@@ -17,6 +17,12 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
   if (!isOpen) return null;
 
   const region = regions.find((r) => r.id === video.region);
+  const isLocked = video.isPremium && !video.isOwned;
+  const creatorName = video.creator || "Lokocontent Creator";
+  const formattedPrice =
+    video.price !== undefined && video.price !== null
+      ? `$${video.price.toFixed(2)}`
+      : undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -51,7 +57,7 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
                 src={video.thumbnail || "/placeholder.svg"}
                 alt={video.title}
                 fill
-                className={`object-cover ${video.isPremium ? "blur-sm" : ""}`}
+                className={`object-cover ${isLocked ? "blur-sm" : ""}`}
               />
 
               {/* Gradient Overlays */}
@@ -59,7 +65,7 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-loko-surface lg:block hidden" />
 
               {/* Lock Overlay for Premium */}
-              {video.isPremium && (
+              {isLocked && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/30">
                   <div className="w-20 h-20 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center mb-4">
                     <Lock className="w-10 h-10 text-loko-gold" />
@@ -91,7 +97,7 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
                 <div className="px-3 py-1 rounded-full bg-loko-gold/20 border border-loko-gold/30">
                   <div className="flex items-center gap-1.5 text-loko-gold text-sm font-medium">
                     <Lock className="w-3.5 h-3.5" />
-                    Premium
+                    {video.isOwned ? "Owned Premium" : "Premium"}
                   </div>
                 </div>
               </div>
@@ -113,7 +119,7 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4" />
-                <span>{video.duration}</span>
+                <span>{video.duration || "—"}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Globe className="w-4 h-4" />
@@ -131,7 +137,7 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Created by</p>
-                <p className="font-semibold text-foreground">{video.creator}</p>
+                <p className="font-semibold text-foreground">{creatorName}</p>
               </div>
             </div>
 
@@ -161,12 +167,12 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
 
             {/* CTA */}
             <div className="mt-auto space-y-4">
-              {video.isPremium ? (
-                <UnlockButton price="$4.99" onClick={() => {}} />
+              {isLocked ? (
+                <UnlockButton price={formattedPrice} onClick={() => {}} />
               ) : (
                 <Button className="w-full bg-loko-gold hover:bg-loko-gold/90 text-background font-semibold py-6">
                   <Play className="w-5 h-5 mr-2" fill="currentColor" />
-                  Watch Now - Free
+                  Watch Now
                 </Button>
               )}
 

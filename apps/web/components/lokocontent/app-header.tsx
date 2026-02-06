@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   Bell,
@@ -24,6 +25,9 @@ export function AppHeader({
   onRegionChange,
   onCategoryChange,
 }: AppHeaderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,6 +70,53 @@ export function AppHeader({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const searchParamsString = searchParams.toString();
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParamsString);
+    const nextQuery = params.get("q") ?? "";
+    const nextRegion = params.get("region") ?? "all";
+    const nextCategory = params.get("category") ?? "all";
+
+    setSearchQuery(nextQuery);
+    setActiveRegion(nextRegion);
+    setActiveCategory(nextCategory);
+  }, [searchParamsString]);
+
+  const submitSearch = () => {
+    const trimmedQuery = searchQuery.trim();
+    const params = new URLSearchParams();
+    if (trimmedQuery) {
+      params.set("q", trimmedQuery);
+    }
+    if (activeRegion && activeRegion !== "all") {
+      params.set("region", activeRegion);
+    }
+    if (activeCategory && activeCategory !== "all") {
+      params.set("category", activeCategory);
+    }
+    const queryString = params.toString();
+    const target = `/browse${queryString ? `?${queryString}` : ""}`;
+
+    if (pathname !== "/browse") {
+      router.push(target);
+      return;
+    }
+
+    router.replace(target);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setActiveRegion("all");
+    setActiveCategory("all");
+    onRegionChange?.("all");
+    onCategoryChange?.("all");
+    setShowFilters(false);
+    setIsMobileSearchOpen(false);
+    router.replace("/browse");
+  };
 
   const FilterContent = () => (
     <div className="p-4">
@@ -120,12 +171,7 @@ export function AppHeader({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => {
-            setActiveRegion("all");
-            setActiveCategory("all");
-            onRegionChange?.("all");
-            onCategoryChange?.("all");
-          }}
+          onClick={clearSearch}
           className="text-muted-foreground"
         >
           Clear All
@@ -133,6 +179,7 @@ export function AppHeader({
         <Button
           size="sm"
           onClick={() => {
+            submitSearch();
             setShowFilters(false);
             setIsMobileSearchOpen(false);
           }}
@@ -161,6 +208,11 @@ export function AppHeader({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  submitSearch();
+                }
+              }}
               placeholder="Search movies, series, documentaries..."
               className="w-full pl-12 pr-12 py-2.5 bg-secondary rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-loko-gold/50 transition-all"
             />
@@ -251,6 +303,12 @@ export function AppHeader({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    submitSearch();
+                    closeMobileSearch();
+                  }
+                }}
                 placeholder="Search movies, series, documentaries..."
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                 autoFocus

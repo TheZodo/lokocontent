@@ -1,49 +1,136 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { History, Clock, Trash2 } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import { VideoCard } from "@/components/lokocontent/video-card";
 import { ContentModal } from "@/components/lokocontent/content-modal";
 import { Button } from "@/components/ui/button";
-import { trendingContent, newReleases, type VideoContent } from "@/lib/lokocontent-data";
+import type { VideoContent } from "@/lib/lokocontent-data";
+import { mapApiContentToVideoContent } from "@/lib/content-mappers";
+import {
+  clearWatchHistory,
+  getWatchHistory,
+} from "@/api/requests/history";
+import { getContentById } from "@/api/requests/content";
+import { useApiMutation, useApiQuery } from "@/api/query";
 
-// Mock watch history data
-const watchHistory = [
-  {
-    date: "Today",
-    items: trendingContent.slice(0, 3).map((v, i) => ({
-      ...v,
-      watchedAt: `${i + 1}h ago`,
-      progress: Math.floor(Math.random() * 100),
-    })),
-  },
-  {
-    date: "Yesterday",
-    items: newReleases.slice(0, 4).map((v, i) => ({
-      ...v,
-      watchedAt: "Yesterday",
-      progress: Math.floor(Math.random() * 100),
-    })),
-  },
-  {
-    date: "This Week",
-    items: [...trendingContent.slice(3, 5), ...newReleases.slice(4, 6)].map((v) => ({
-      ...v,
-      watchedAt: "3 days ago",
-      progress: 100,
-    })),
-  },
-];
+type HistoryEntry = {
+  content: VideoContent;
+  progress: number;
+  lastWatchedAt: string;
+};
+
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const formatRelativeLabel = (date: Date) => {
+  const now = startOfDay(new Date());
+  const entry = startOfDay(date);
+  const diffMs = now.getTime() - entry.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    return "Today";
+  }
+  if (diffDays === 1) {
+    return "Yesterday";
+  }
+  if (diffDays < 7) {
+    return "This Week";
+  }
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+};
+
+const formatRelativeTime = (date: Date) => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+
+  if (diffHours < 1) {
+    return "Just now";
+  }
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
 
 export default function HistoryPage() {
+  const { getToken, isSignedIn } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedVideo, setSelectedVideo] = useState<VideoContent | null>(null);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+
+  const historyQuery = useApiQuery(["history", "list"], (api) =>
+    getWatchHistory(api, { limit: 24, offset: 0 })
+  );
+
+  const clearHistoryMutation = useApiMutation(
+    (api) => clearWatchHistory(api),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["history", "list"] });
+      },
+    }
+  );
+
+  const contentDetailsQuery = useApiQuery(
+    ["content", "details", selectedVideoId],
+    async (api) => {
+      if (!selectedVideoId) {
+        throw new Error("Missing content id");
+      }
+      const token = isSignedIn ? await getToken() : null;
+      return getContentById(api, selectedVideoId, { token });
+    },
+    { enabled: Boolean(selectedVideoId) }
+  );
+
+  const historyItems = useMemo<HistoryEntry[]>(() => {
+    const items = historyQuery.data?.data ?? [];
+    return items.map((entry) => {
+      const mapped = mapApiContentToVideoContent(entry.content);
+      return {
+        content: mapped,
+        progress: entry.progress,
+        lastWatchedAt: entry.lastWatchedAt,
+      };
+    });
+  }, [historyQuery.data]);
+
+  const groupedHistory = useMemo(() => {
+    const groups = new Map<string, HistoryEntry[]>();
+    historyItems.forEach((entry) => {
+      const date = new Date(entry.lastWatchedAt);
+      const label = formatRelativeLabel(date);
+      if (!groups.has(label)) {
+        groups.set(label, []);
+      }
+      groups.get(label)?.push(entry);
+    });
+
+    return Array.from(groups.entries()).map(([label, items]) => ({
+      label,
+      items,
+    }));
+  }, [historyItems]);
+
+  useEffect(() => {
+    if (contentDetailsQuery.data && selectedVideoId) {
+      setSelectedVideo(mapApiContentToVideoContent(contentDetailsQuery.data));
+    }
+  }, [contentDetailsQuery.data, selectedVideoId]);
 
   const handleVideoClick = (video: VideoContent) => {
     setSelectedVideo(video);
+    setSelectedVideoId(video.id);
   };
 
   const handleCloseModal = () => {
     setSelectedVideo(null);
+    setSelectedVideoId(null);
   };
 
   return (
@@ -67,46 +154,66 @@ export default function HistoryPage() {
           <Button
             variant="outline"
             className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/50 hover:bg-destructive/10 bg-transparent"
+            onClick={() => clearHistoryMutation.mutate(undefined)}
+            disabled={clearHistoryMutation.isPending}
           >
             <Trash2 className="w-4 h-4 mr-2" />
-            Clear History
+            {clearHistoryMutation.isPending ? "Clearing..." : "Clear History"}
           </Button>
         </div>
 
-        {/* History Sections */}
-        <div className="space-y-10">
-          {watchHistory.map((section) => (
-            <div key={section.date}>
-              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                {section.date}
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {section.items.map((item) => (
-                  <div key={`${section.date}-${item.id}`} className="relative">
-                    <VideoCard
-                      video={item}
-                      onClick={() => handleVideoClick(item)}
-                    />
-                    {/* Progress bar */}
-                    {item.progress < 100 && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted rounded-b-lg overflow-hidden">
-                        <div
-                          className="h-full bg-loko-gold"
-                          style={{ width: `${item.progress}%` }}
-                        />
-                      </div>
-                    )}
-                    {/* Time badge */}
-                    <div className="absolute top-2 right-2 px-2 py-1 rounded-md bg-background/90 backdrop-blur-sm text-xs text-muted-foreground">
-                      {item.watchedAt}
-                    </div>
-                  </div>
-                ))}
+        {historyQuery.isLoading && (
+          <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
+            Loading watch history…
+          </div>
+        )}
+
+        {historyQuery.isError && (
+          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
+            Failed to load watch history.
+          </div>
+        )}
+
+        {!historyQuery.isLoading && !historyQuery.isError && (
+          <div className="space-y-10">
+            {groupedHistory.length === 0 && (
+              <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
+                Your watch history is empty.
               </div>
-            </div>
-          ))}
-        </div>
+            )}
+            {groupedHistory.map((section) => (
+              <div key={section.label}>
+                <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  {section.label}
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {section.items.map((item) => (
+                    <div key={`${section.label}-${item.content.id}`} className="relative">
+                      <VideoCard
+                        video={item.content}
+                        onClick={() => handleVideoClick(item.content)}
+                      />
+                      {/* Progress bar */}
+                      {item.progress < 100 && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted rounded-b-lg overflow-hidden">
+                          <div
+                            className="h-full bg-loko-gold"
+                            style={{ width: `${item.progress}%` }}
+                          />
+                        </div>
+                      )}
+                      {/* Time badge */}
+                      <div className="absolute top-2 right-2 px-2 py-1 rounded-md bg-background/90 backdrop-blur-sm text-xs text-muted-foreground">
+                        {formatRelativeTime(new Date(item.lastWatchedAt))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {selectedVideo && (
