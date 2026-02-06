@@ -37,6 +37,7 @@ enum PaymentProvider {
   STRIPE
   PAYSTACK
   FLUTTERWAVE
+  LIPILA
 }
 
 enum PurchaseStatus {

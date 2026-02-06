@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common'
+import { Prisma, User } from '@lokocontent/db'
 import { PrismaService } from '../prisma/prisma.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateSettingsDto } from './dto/update-settings.dto'
@@ -8,7 +9,7 @@ import { UpdatePayoutDto } from './dto/update-payout.dto'
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getMe(userId: string) {
+  async getMe(userId: string): Promise<User> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     })
@@ -20,7 +21,7 @@ export class UsersService {
     return user
   }
 
-  async updateProfile(userId: string, dto: UpdateProfileDto) {
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -35,7 +36,7 @@ export class UsersService {
     return user
   }
 
-  async updateSettings(userId: string, dto: UpdateSettingsDto) {
+  async updateSettings(userId: string, dto: UpdateSettingsDto): Promise<User> {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -60,12 +61,15 @@ export class UsersService {
     return user
   }
 
-  async updatePayout(userId: string, dto: UpdatePayoutDto) {
+  async updatePayout(userId: string, dto: UpdatePayoutDto): Promise<User> {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
         payoutMethod: dto.payoutMethod,
-        payoutDetails: dto.payoutDetails ?? undefined,
+        payoutDetails:
+          dto.payoutDetails != null
+            ? (dto.payoutDetails as Prisma.InputJsonValue)
+            : undefined,
       },
     })
 

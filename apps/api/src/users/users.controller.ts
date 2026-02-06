@@ -11,7 +11,7 @@ import { ClerkAuthGuard } from '../common/guards/clerk-auth.guard'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { Roles } from '../common/decorators/roles.decorator'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
-import { Role } from '@lokocontent/db'
+import { Role, User } from '@lokocontent/db'
 import { UsersService } from './users.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateSettingsDto } from './dto/update-settings.dto'
@@ -28,7 +28,9 @@ export class UsersController {
 
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })
-  async getMe(@CurrentUser() userId: string) {
+  async getMe(
+    @CurrentUser() userId: string,
+  ): Promise<{ success: true; data: User }> {
     const user = await this.usersService.getMe(userId)
     return {
       success: true,
@@ -41,7 +43,7 @@ export class UsersController {
   async updateProfile(
     @CurrentUser() userId: string,
     @Body() dto: UpdateProfileDto,
-  ) {
+  ): Promise<{ success: true; data: User }> {
     const user = await this.usersService.updateProfile(userId, dto)
     return {
       success: true,
@@ -54,7 +56,7 @@ export class UsersController {
   async updateSettings(
     @CurrentUser() userId: string,
     @Body() dto: UpdateSettingsDto,
-  ) {
+  ): Promise<{ success: true; data: User }> {
     const user = await this.usersService.updateSettings(userId, dto)
     return {
       success: true,
@@ -69,7 +71,7 @@ export class UsersController {
   async updatePayout(
     @CurrentUser() userId: string,
     @Body() dto: UpdatePayoutDto,
-  ) {
+  ): Promise<{ success: true; data: User }> {
     const user = await this.usersService.updatePayout(userId, dto)
     return {
       success: true,
