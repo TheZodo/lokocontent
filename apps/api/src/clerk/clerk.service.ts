@@ -84,6 +84,12 @@ export class ClerkService {
 
     const wh = new Webhook(webhookSecret)
 
+    console.log('malaizyo payload', payload)
+
+    console.log('malaizyo headers', headers)
+
+    console.log('malaizyo webhookSecret', webhookSecret)
+
     try {
       const event = wh.verify(payload, {
         'svix-id': headers['svix-id'],
