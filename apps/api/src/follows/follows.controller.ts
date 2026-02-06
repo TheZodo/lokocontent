@@ -10,6 +10,7 @@ import {
   HttpStatus,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { User } from '@lokocontent/db'
 import { ClerkAuthGuard } from '../common/guards/clerk-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { FollowsService } from './follows.service'
@@ -52,7 +53,9 @@ export class FollowsController {
 
   @Get('following')
   @ApiOperation({ summary: 'Get creators user is following' })
-  async getFollowing(@CurrentUser() userId: string) {
+  async getFollowing(
+    @CurrentUser() userId: string,
+  ): Promise<{ success: true; data: { data: User[]; total: number } }> {
     const { total, users } = await this.followsService.getFollowing(userId)
     return {
       success: true,
@@ -65,7 +68,9 @@ export class FollowsController {
 
   @Get('followers')
   @ApiOperation({ summary: 'Get followers for current user' })
-  async getFollowers(@CurrentUser() userId: string) {
+  async getFollowers(
+    @CurrentUser() userId: string,
+  ): Promise<{ success: true; data: { data: User[]; total: number } }> {
     const { total, users } = await this.followsService.getFollowers(userId)
     return {
       success: true,

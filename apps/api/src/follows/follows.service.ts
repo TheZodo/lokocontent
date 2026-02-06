@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { User } from '@lokocontent/db'
 import { PrismaService } from '../prisma/prisma.service'
 
 @Injectable()
@@ -47,7 +48,7 @@ export class FollowsService {
     return { success: true }
   }
 
-  async getFollowing(userId: string) {
+  async getFollowing(userId: string): Promise<{ total: number; users: User[] }> {
     const [total, items] = await this.prisma.$transaction([
       this.prisma.follow.count({
         where: { followerId: userId },
@@ -67,7 +68,7 @@ export class FollowsService {
     }
   }
 
-  async getFollowers(userId: string) {
+  async getFollowers(userId: string): Promise<{ total: number; users: User[] }> {
     const [total, items] = await this.prisma.$transaction([
       this.prisma.follow.count({
         where: { followingId: userId },
