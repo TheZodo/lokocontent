@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { Upload, Info, CheckCircle2 } from "lucide-react";
-import { UploadForm } from "@/components/lokocontent/upload-form";
+import { Upload, Info, CheckCircle2 } from 'lucide-react'
+import { UploadForm } from '@/components/lokocontent/upload-form'
 
 export default function UploadPage() {
   return (
@@ -40,7 +40,9 @@ export default function UploadPage() {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-loko-teal shrink-0 mt-0.5" />
-                <span>Videos must be original content you own the rights to</span>
+                <span>
+                  Videos must be original content you own the rights to
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-loko-teal shrink-0 mt-0.5" />
@@ -88,10 +90,8 @@ export default function UploadPage() {
           </div>
 
           {/* Upload Status */}
-          <div className="p-6 rounded-xl bg-gradient-to-br from-loko-gold/10 to-loko-deep-red/10 border border-loko-gold/20">
-            <h3 className="font-semibold text-foreground mb-2">
-              Need Help?
-            </h3>
+          <div className="p-6 rounded-xl bg-linear-to-br from-loko-gold/10 to-loko-deep-red/10 border border-loko-gold/20">
+            <h3 className="font-semibold text-foreground mb-2">Need Help?</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Our team is here to help you succeed on Lokocontent.
             </p>
@@ -105,5 +105,5 @@ export default function UploadPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }
