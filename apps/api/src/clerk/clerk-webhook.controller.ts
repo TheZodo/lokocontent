@@ -9,11 +9,13 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common'
+import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Request } from 'express'
 import { PrismaService } from '../prisma'
 import { ClerkService } from './clerk.service'
 import { Role } from '@lokocontent/db'
 
+@ApiTags('Webhooks - Clerk')
 @Controller('webhooks/clerk')
 export class ClerkWebhookController {
   private readonly logger = new Logger(ClerkWebhookController.name)
@@ -25,6 +27,7 @@ export class ClerkWebhookController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Clerk user lifecycle webhook (user.created, user.updated, user.deleted)' })
   async handleWebhook(
     @Req() req: Request,
     @Headers('svix-id') svixId: string,

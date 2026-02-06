@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common'
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Request } from 'express'
 import { MuxService } from './mux.service'
 import { ClerkAuthGuard } from '../common/guards/clerk-auth.guard'
@@ -22,18 +23,17 @@ import {
   PlaybackUrlResponseDto,
 } from './dto/create-upload.dto'
 
+@ApiTags('Mux')
 @Controller('mux')
 export class MuxController {
   constructor(private readonly muxService: MuxService) {}
 
-  /**
-   * Create a direct upload URL for video uploads
-   * Requires CREATOR or ADMIN role
-   */
   @Post('upload-url')
   @UseGuards(ClerkAuthGuard, RolesGuard)
   @Roles(Role.CREATOR, Role.ADMIN)
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create direct upload URL for video or trailer (CREATOR or ADMIN)' })
   async createUploadUrl(
     @Body() dto: CreateUploadDto,
     @Req() req: Request,
@@ -49,12 +49,10 @@ export class MuxController {
     return this.muxService.createDirectUpload(corsOrigin)
   }
 
-  /**
-   * Get playback URL for a video
-   * For premium content, returns a signed URL
-   */
   @Get('playback/:playbackId')
   @UseGuards(ClerkAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get signed playback URL for a video' })
   async getPlaybackUrl(
     @Param('playbackId') playbackId: string,
   ): Promise<PlaybackUrlResponseDto> {
@@ -63,10 +61,8 @@ export class MuxController {
     return this.muxService.getSignedPlaybackUrl(playbackId)
   }
 
-  /**
-   * Get thumbnail URL for a video
-   */
   @Get('thumbnail/:playbackId')
+  @ApiOperation({ summary: 'Get thumbnail URL for a video' })
   async getThumbnailUrl(
     @Param('playbackId') playbackId: string,
   ): Promise<{ thumbnailUrl: string }> {
@@ -74,13 +70,11 @@ export class MuxController {
     return { thumbnailUrl }
   }
 
-  /**
-   * Get upload status
-   * Requires CREATOR or ADMIN role
-   */
   @Get('upload/:uploadId')
   @UseGuards(ClerkAuthGuard, RolesGuard)
   @Roles(Role.CREATOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get Mux upload status (CREATOR or ADMIN)' })
   async getUploadStatus(@Param('uploadId') uploadId: string) {
     const upload = await this.muxService.getUpload(uploadId)
     return {

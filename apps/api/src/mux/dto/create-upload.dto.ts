@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger'
 import { IsOptional, IsString, IsEnum } from 'class-validator'
 
 export enum UploadType {
@@ -6,10 +7,12 @@ export enum UploadType {
 }
 
 export class CreateUploadDto {
+  @ApiPropertyOptional({ enum: UploadType, default: UploadType.VIDEO })
   @IsOptional()
   @IsEnum(UploadType)
   type?: UploadType = UploadType.VIDEO
 
+  @ApiPropertyOptional({ example: 'http://localhost:3000', description: 'CORS origin for the upload' })
   @IsOptional()
   @IsString()
   corsOrigin?: string

@@ -8,6 +8,7 @@ import {
   Logger,
   BadRequestException,
 } from '@nestjs/common'
+import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Request } from 'express'
 import { MuxService } from './mux.service'
 import { PrismaService } from '../prisma'
@@ -18,6 +19,7 @@ interface RequestWithRawBody extends Request {
   rawBody?: string
 }
 
+@ApiTags('Webhooks - Mux')
 @Controller('webhooks/mux')
 export class MuxWebhookController {
   private readonly logger = new Logger(MuxWebhookController.name)
@@ -29,6 +31,7 @@ export class MuxWebhookController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mux video lifecycle webhook (asset created, ready, errored, deleted)' })
   async handleWebhook(
     @Req() req: RequestWithRawBody,
     @Headers('mux-signature') signature: string,

@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common'
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { UploadService } from './upload.service'
 import { ClerkAuthGuard } from '../common/guards/clerk-auth.guard'
 import { RolesGuard } from '../common/guards/roles.guard'
@@ -19,18 +20,17 @@ import {
   DeleteFileDto,
 } from './dto/presigned-url.dto'
 
+@ApiTags('Upload')
 @Controller('upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
-  /**
-   * Get presigned URL for thumbnail upload
-   * Requires CREATOR or ADMIN role
-   */
   @Post('thumbnail')
   @UseGuards(ClerkAuthGuard, RolesGuard)
   @Roles(Role.CREATOR, Role.ADMIN)
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get presigned URL for thumbnail upload (CREATOR or ADMIN)' })
   async getThumbnailUploadUrl(
     @Body() dto: PresignedUrlDto,
     @CurrentUser() userId: string,
@@ -42,13 +42,11 @@ export class UploadController {
     )
   }
 
-  /**
-   * Get presigned URL for profile picture upload
-   * Available to all authenticated users
-   */
   @Post('profile-picture')
   @UseGuards(ClerkAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get presigned URL for profile picture upload' })
   async getProfilePictureUploadUrl(
     @Body() dto: PresignedUrlDto,
     @CurrentUser() userId: string,
@@ -60,15 +58,12 @@ export class UploadController {
     )
   }
 
-  /**
-   * Delete a file from storage
-   * Requires CREATOR or ADMIN role
-   * Note: Should verify ownership before deletion in production
-   */
   @Delete()
   @UseGuards(ClerkAuthGuard, RolesGuard)
   @Roles(Role.CREATOR, Role.ADMIN)
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a file from storage (CREATOR or ADMIN)' })
   async deleteFile(
     @Body() dto: DeleteFileDto,
     @CurrentUser() userId: string,

@@ -1,0 +1,274 @@
+{
+  "info": {
+    "name": "Lokocontent API",
+    "description": "API collection for Lokocontent - video content platform. Base URL uses {{baseUrl}} (default: http://localhost:3001). Auth endpoints require Clerk session token in Authorization header.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "clerkToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "playbackId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "uploadId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "App",
+      "description": "Root and health endpoints",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api",
+            "description": "Welcome message / API root"
+          }
+        },
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health",
+            "description": "Health check - returns status and timestamp"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "description": "Presigned URLs for thumbnails and profile pictures. Thumbnail and delete require CREATOR or ADMIN role.",
+      "item": [
+        {
+          "name": "Get Thumbnail Upload URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clerkToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"thumbnail.jpg\",\n  \"contentType\": \"image/jpeg\"\n}"
+            },
+            "url": "{{baseUrl}}/api/upload/thumbnail",
+            "description": "Get presigned URL for thumbnail upload. Requires CREATOR or ADMIN role."
+          }
+        },
+        {
+          "name": "Get Profile Picture Upload URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clerkToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"avatar.png\",\n  \"contentType\": \"image/png\"\n}"
+            },
+            "url": "{{baseUrl}}/api/upload/profile-picture",
+            "description": "Get presigned URL for profile picture upload. Any authenticated user."
+          }
+        },
+        {
+          "name": "Delete File",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clerkToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"thumbnails/USER_ID/filename.jpg\"\n}"
+            },
+            "url": "{{baseUrl}}/api/upload",
+            "description": "Delete a file from storage. Key must contain userId (ownership check). Requires CREATOR or ADMIN."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mux",
+      "description": "Video upload URLs, playback, thumbnails, and upload status.",
+      "item": [
+        {
+          "name": "Create Upload URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clerkToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"video\",\n  \"corsOrigin\": \"http://localhost:3000\"\n}"
+            },
+            "url": "{{baseUrl}}/api/mux/upload-url",
+            "description": "Create direct upload URL for video (or trailer). type: 'video' | 'trailer'. Requires CREATOR or ADMIN."
+          }
+        },
+        {
+          "name": "Get Playback URL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clerkToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/mux/playback/{{playbackId}}",
+            "description": "Get signed playback URL for a video. Requires auth."
+          }
+        },
+        {
+          "name": "Get Thumbnail URL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/mux/thumbnail/{{playbackId}}",
+            "description": "Get thumbnail URL for a video. No auth required."
+          }
+        },
+        {
+          "name": "Get Upload Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clerkToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/mux/upload/{{uploadId}}",
+            "description": "Get Mux upload status (id, status, assetId). Requires CREATOR or ADMIN."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks - Clerk",
+      "description": "Clerk user lifecycle webhooks. Requires Svix headers for signature verification.",
+      "item": [
+        {
+          "name": "Clerk Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "svix-id",
+                "value": "{{svixId}}",
+                "type": "text",
+                "description": "Svix message ID"
+              },
+              {
+                "key": "svix-timestamp",
+                "value": "{{svixTimestamp}}",
+                "type": "text"
+              },
+              {
+                "key": "svix-signature",
+                "value": "{{svixSignature}}",
+                "type": "text",
+                "description": "HMAC signature of body with CLERK_WEBHOOK_SECRET"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"user.created\",\n  \"data\": {\n    \"id\": \"user_xxx\",\n    \"email_addresses\": [{\n      \"id\": \"idn_xxx\",\n      \"email_address\": \"user@example.com\"\n    }],\n    \"first_name\": \"Jane\",\n    \"last_name\": \"Doe\",\n    \"image_url\": \"https://...\",\n    \"primary_email_address_id\": \"idn_xxx\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/webhooks/clerk",
+            "description": "Clerk webhook endpoint. Handles user.created, user.updated, user.deleted. Use Svix CLI or Dashboard to send real payloads with valid signatures."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks - Mux",
+      "description": "Mux video lifecycle webhooks. Optional mux-signature header when MUX_WEBHOOK_SECRET is set.",
+      "item": [
+        {
+          "name": "Mux Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "mux-signature",
+                "value": "{{muxSignature}}",
+                "type": "text",
+                "description": "HMAC signature when MUX_WEBHOOK_SECRET is configured"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"video.asset.ready\",\n  \"data\": {\n    \"id\": \"asset_id_xxx\",\n    \"playback_ids\": [{\n      \"id\": \"playback_id_xxx\",\n      \"policy\": \"signed\"\n    }],\n    \"duration\": 120.5,\n    \"aspect_ratio\": \"16:9\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/webhooks/mux",
+            "description": "Mux webhook. Handles video.upload.asset_created, video.asset.ready, video.asset.errored, video.asset.deleted. Raw body is used for signature verification."
+          }
+        }
+      ]
+    }
+  ]
+}

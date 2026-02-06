@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { createClerkClient } from '@clerk/clerk-sdk-node'
+import { createClerkClient } from '@clerk/backend'
 import { Role } from '@lokocontent/db'
 import { Webhook } from 'svix'
 

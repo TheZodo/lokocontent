@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import { ValidationPipe } from '@nestjs/common'
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import { json } from 'express'
@@ -51,6 +52,16 @@ async function bootstrap() {
 
   // Global API prefix - all routes will be under /api
   app.setGlobalPrefix('api')
+
+  // Swagger / OpenAPI docs at /api/docs (JSON at /api/docs-json)
+  const config = new DocumentBuilder()
+    .setTitle('Lokocontent API')
+    .setDescription('API for Lokocontent video content platform')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build()
+  const document = SwaggerModule.createDocument(app, config)
+  SwaggerModule.setup('docs', app, document)
 
   const port = process.env.PORT || 3001
   await app.listen(port)
