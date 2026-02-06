@@ -13,6 +13,7 @@ import { PurchasesModule } from './purchases'
 import { UsersModule } from './users'
 import { FollowsModule } from './follows'
 import { RatingsModule } from './ratings'
+import { AnalyticsModule } from './analytics'
 
 // Load .env from monorepo root (when running from root) or apps/api
 const rootEnv = join(process.cwd(), '.env')
@@ -34,6 +35,7 @@ const monorepoRootEnv = join(process.cwd(), '../../.env')
     UsersModule,
     FollowsModule,
     RatingsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
