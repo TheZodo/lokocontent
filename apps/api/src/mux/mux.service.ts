@@ -71,7 +71,7 @@ export class MuxService {
       const upload = await this.mux.video.uploads.create({
         cors_origin: corsOrigin,
         new_asset_settings: {
-          playback_policy: ['public'],
+          playback_policies: ['public'],
           encoding_tier: 'baseline',
         },
       })
