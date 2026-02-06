@@ -1,0 +1,74 @@
+import { ForbiddenException, Injectable } from '@nestjs/common'
+import { PrismaService } from '../prisma/prisma.service'
+import { UpdateProfileDto } from './dto/update-profile.dto'
+import { UpdateSettingsDto } from './dto/update-settings.dto'
+import { UpdatePayoutDto } from './dto/update-payout.dto'
+
+@Injectable()
+export class UsersService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    })
+
+    if (!user) {
+      throw new ForbiddenException('User not found')
+    }
+
+    return user
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.displayName !== undefined ? { displayName: dto.displayName } : null),
+        ...(dto.bio !== undefined ? { bio: dto.bio } : null),
+        ...(dto.profilePicture !== undefined
+          ? { profilePicture: dto.profilePicture }
+          : null),
+      },
+    })
+
+    return user
+  }
+
+  async updateSettings(userId: string, dto: UpdateSettingsDto) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.emailNotifications !== undefined
+          ? { emailNotifications: dto.emailNotifications }
+          : null),
+        ...(dto.newFollowerNotifications !== undefined
+          ? { newFollowerNotifications: dto.newFollowerNotifications }
+          : null),
+        ...(dto.contentUpdateNotifications !== undefined
+          ? { contentUpdateNotifications: dto.contentUpdateNotifications }
+          : null),
+        ...(dto.earningsNotifications !== undefined
+          ? { earningsNotifications: dto.earningsNotifications }
+          : null),
+        ...(dto.watchHistoryEnabled !== undefined
+          ? { watchHistoryEnabled: dto.watchHistoryEnabled }
+          : null),
+      },
+    })
+
+    return user
+  }
+
+  async updatePayout(userId: string, dto: UpdatePayoutDto) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        payoutMethod: dto.payoutMethod,
+        payoutDetails: dto.payoutDetails ?? undefined,
+      },
+    })
+
+    return user
+  }
+}

@@ -9,6 +9,7 @@ import { MuxModule } from './mux'
 import { UploadModule } from './upload'
 import { ContentModule } from './content'
 import { HistoryModule } from './history'
+import { UsersModule } from './users'
 
 // Load .env from monorepo root (when running from root) or apps/api
 const rootEnv = join(process.cwd(), '.env')
@@ -26,6 +27,7 @@ const monorepoRootEnv = join(process.cwd(), '../../.env')
     UploadModule,
     ContentModule,
     HistoryModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
