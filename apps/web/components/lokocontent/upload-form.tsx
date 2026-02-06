@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { regions, categories } from '@/lib/lokocontent-data'
 import { useApiClient } from '@/api/use-api-client'
 import { unwrapApiResponse } from '@/api/client'
+import { ContentStatus } from '@lokocontent/db'
 import { createContent } from '@/api/requests/content'
 import { createThumbnailUpload } from '@/api/requests/upload'
 import { createMuxUploadUrl, getMuxUploadStatus } from '@/api/requests/mux'
@@ -308,12 +309,12 @@ export function UploadForm() {
         releaseYear: Number.isNaN(releaseYear)
           ? new Date().getFullYear()
           : releaseYear,
-        muxAssetId: mainVideo.muxAssetId,
-        muxPlaybackId: mainVideo.muxPlaybackId,
-        trailerMuxAssetId: trailer.muxAssetId,
-        trailerMuxPlaybackId: trailer.muxPlaybackId,
+        muxAssetId: mainVideo.muxAssetId ?? null,
+        muxPlaybackId: mainVideo.muxPlaybackId ?? null,
+        trailerMuxAssetId: trailer.muxAssetId ?? null,
+        trailerMuxPlaybackId: trailer.muxPlaybackId ?? null,
         thumbnailUrl,
-        status: 'published',
+        status: ContentStatus.PUBLISHED,
       }
 
       if (!payload.muxAssetId || !payload.muxPlaybackId) {
