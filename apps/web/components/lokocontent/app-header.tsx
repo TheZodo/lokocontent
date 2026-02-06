@@ -4,11 +4,11 @@ import { useState, useRef, useEffect } from "react";
 import {
   Search,
   Bell,
-  User,
   ChevronDown,
   ChevronUp,
   X,
 } from "lucide-react";
+import { SignedIn, SignedOut, UserButton, RedirectToSignIn } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { regions, categories } from "@/lib/lokocontent-data";
 import { Button } from "@/components/ui/button";
@@ -211,18 +211,21 @@ export function AppHeader({
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-loko-gold rounded-full" />
           </button>
 
-          <button
-            type="button"
-            className="flex items-center gap-2 p-1.5 pr-3 rounded-full hover:bg-secondary transition-colors"
-            aria-label="Profile"
-          >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-loko-teal to-loko-purple flex items-center justify-center">
-              <User className="w-4 h-4 text-foreground" />
+          <SignedOut>
+            <RedirectToSignIn />
+          </SignedOut>
+          <SignedIn>
+            <div className="flex items-center p-1.5 rounded-full hover:bg-secondary transition-colors">
+              <UserButton
+                afterSignOutUrl="/sign-in"
+                appearance={{
+                  elements: {
+                    avatarBox: "w-8 h-8",
+                  },
+                }}
+              />
             </div>
-            <span className="hidden sm:block text-sm font-medium text-foreground">
-              Profile
-            </span>
-          </button>
+          </SignedIn>
         </div>
       </header>
 
