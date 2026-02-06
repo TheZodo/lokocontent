@@ -8,6 +8,8 @@ import {
   Req,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Request } from 'express'
@@ -15,7 +17,9 @@ import { MuxService } from './mux.service'
 import { ClerkAuthGuard } from '../common/guards/clerk-auth.guard'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { Roles } from '../common/decorators/roles.decorator'
-import { Role } from '@lokocontent/db'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import { PrismaService } from '../prisma/prisma.service'
+import { PurchaseStatus, Role } from '@lokocontent/db'
 import {
   CreateUploadDto,
   UploadType,
@@ -26,7 +30,10 @@ import {
 @ApiTags('Mux')
 @Controller('mux')
 export class MuxController {
-  constructor(private readonly muxService: MuxService) {}
+  constructor(
+    private readonly muxService: MuxService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post('upload-url')
   @UseGuards(ClerkAuthGuard, RolesGuard)
@@ -54,10 +61,39 @@ export class MuxController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get signed playback URL for a video' })
   async getPlaybackUrl(
+    @CurrentUser() userId: string,
     @Param('playbackId') playbackId: string,
   ): Promise<PlaybackUrlResponseDto> {
-    // TODO: Add premium content verification
-    // Check if content is premium and user has purchased
+    const content = await this.prisma.videoContent.findFirst({
+      where: {
+        muxPlaybackId: playbackId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isPremium: true,
+      },
+    })
+
+    if (!content) {
+      throw new NotFoundException('Content not found')
+    }
+
+    if (content.isPremium) {
+      const purchase = await this.prisma.purchase.findFirst({
+        where: {
+          userId,
+          contentId: content.id,
+          status: PurchaseStatus.COMPLETED,
+        },
+        select: { id: true },
+      })
+
+      if (!purchase) {
+        throw new ForbiddenException('Purchase required to access this content')
+      }
+    }
+
     return this.muxService.getSignedPlaybackUrl(playbackId)
   }
 
