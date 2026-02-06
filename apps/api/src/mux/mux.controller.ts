@@ -113,10 +113,19 @@ export class MuxController {
   @ApiOperation({ summary: 'Get Mux upload status (CREATOR or ADMIN)' })
   async getUploadStatus(@Param('uploadId') uploadId: string) {
     const upload = await this.muxService.getUpload(uploadId)
+    const assetId = upload.asset_id ?? null
+    let playbackId: string | null = null
+
+    if (assetId) {
+      const asset = await this.muxService.getAsset(assetId)
+      playbackId = asset.playback_ids?.[0]?.id ?? null
+    }
+
     return {
       id: upload.id,
       status: upload.status,
-      assetId: upload.asset_id,
+      assetId,
+      playbackId,
     }
   }
 }

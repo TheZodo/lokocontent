@@ -1,7 +1,9 @@
 'use client'
 
 import type React from 'react'
-import { useState, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import * as tus from 'tus-js-client'
 import {
   Upload,
   Film,
@@ -20,6 +22,11 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { regions, categories } from '@/lib/lokocontent-data'
+import { useApiClient } from '@/api/use-api-client'
+import { unwrapApiResponse } from '@/api/client'
+import { createContent } from '@/api/requests/content'
+import { createThumbnailUpload } from '@/api/requests/upload'
+import { createMuxUploadUrl, getMuxUploadStatus } from '@/api/requests/mux'
 
 type UploadStatus = 'idle' | 'uploading' | 'processing' | 'complete' | 'error'
 
@@ -30,6 +37,9 @@ interface FileUpload {
   progress: number
   muxAssetId?: string
   muxPlaybackId?: string
+  uploadId?: string
+  publicUrl?: string
+  error?: string
 }
 
 interface UploadFormData {
@@ -42,30 +52,43 @@ interface UploadFormData {
   releaseYear: string
 }
 
-// Stub functions for MUX integration
-async function uploadToMux(
-  file: File,
-  onProgress: (progress: number) => void,
-): Promise<{ assetId: string; playbackId: string }> {
-  // Simulate upload progress
-  for (let i = 0; i <= 100; i += 10) {
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    onProgress(i)
-  }
-  // Return mock MUX asset IDs
-  return {
-    assetId: `mux-asset-${Date.now()}`,
-    playbackId: `mux-playback-${Date.now()}`,
-  }
-}
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-async function uploadThumbnail(file: File): Promise<string> {
-  // Simulate thumbnail upload
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-  return URL.createObjectURL(file)
+const createMuxThumbnailUrl = (playbackId: string) =>
+  `https://image.mux.com/${playbackId}/thumbnail.jpg`
+
+async function uploadFileToMux(
+  file: File,
+  uploadUrl: string,
+  onProgress: (progress: number) => void,
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      uploadUrl,
+      metadata: {
+        filename: file.name,
+        filetype: file.type,
+      },
+      retryDelays: [0, 2000, 5000, 10000],
+      onProgress: (bytesUploaded, bytesTotal) => {
+        const progress = Math.round((bytesUploaded / bytesTotal) * 100)
+        onProgress(progress)
+      },
+      onError: (error) => {
+        reject(error)
+      },
+      onSuccess: () => {
+        resolve()
+      },
+    })
+
+    upload.start()
+  })
 }
 
 export function UploadForm() {
+  const api = useApiClient()
+  const router = useRouter()
   const [formData, setFormData] = useState<UploadFormData>({
     title: '',
     synopsis: '',
@@ -101,6 +124,7 @@ export function UploadForm() {
   const [submitStatus, setSubmitStatus] = useState<
     'idle' | 'success' | 'error'
   >('idle')
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const mainVideoRef = useRef<HTMLInputElement>(null)
   const thumbnailRef = useRef<HTMLInputElement>(null)
@@ -118,42 +142,131 @@ export function UploadForm() {
     if (type === 'video') {
       setMainVideo({ file, preview, status: 'uploading', progress: 0 })
       try {
-        const result = await uploadToMux(file, (progress) => {
+        const uploadResponse = await createMuxUploadUrl(api, { type: 'video' })
+        const { uploadUrl, uploadId } = unwrapApiResponse(uploadResponse).data
+
+        setMainVideo((prev) => ({ ...prev, uploadId }))
+
+        await uploadFileToMux(file, uploadUrl, (progress) => {
           setMainVideo((prev) => ({ ...prev, progress }))
         })
+
+        setMainVideo((prev) => ({
+          ...prev,
+          status: 'processing',
+          progress: 100,
+        }))
+
+        const result = await pollMuxUpload(uploadId)
+
         setMainVideo((prev) => ({
           ...prev,
           status: 'complete',
           muxAssetId: result.assetId,
           muxPlaybackId: result.playbackId,
         }))
-      } catch {
-        setMainVideo((prev) => ({ ...prev, status: 'error' }))
+      } catch (error) {
+        setMainVideo((prev) => ({
+          ...prev,
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Upload failed',
+        }))
       }
     } else if (type === 'thumbnail') {
       setThumbnail({ file, preview, status: 'uploading', progress: 0 })
       try {
-        await uploadThumbnail(file)
-        setThumbnail((prev) => ({ ...prev, status: 'complete', progress: 100 }))
-      } catch {
-        setThumbnail((prev) => ({ ...prev, status: 'error' }))
+        const uploadResponse = await createThumbnailUpload(api, {
+          filename: file.name,
+          contentType: file.type,
+        })
+        const { uploadUrl, publicUrl } =
+          unwrapApiResponse(uploadResponse).data
+
+        const response = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type,
+          },
+          body: file,
+        })
+
+        if (!response.ok) {
+          throw new Error('Thumbnail upload failed')
+        }
+
+        setThumbnail((prev) => ({
+          ...prev,
+          status: 'complete',
+          progress: 100,
+          publicUrl,
+        }))
+      } catch (error) {
+        setThumbnail((prev) => ({
+          ...prev,
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Upload failed',
+        }))
       }
     } else if (type === 'trailer') {
       setTrailer({ file, preview, status: 'uploading', progress: 0 })
       try {
-        const result = await uploadToMux(file, (progress) => {
+        const uploadResponse = await createMuxUploadUrl(api, {
+          type: 'trailer',
+        })
+        const { uploadUrl, uploadId } = unwrapApiResponse(uploadResponse).data
+
+        setTrailer((prev) => ({ ...prev, uploadId }))
+
+        await uploadFileToMux(file, uploadUrl, (progress) => {
           setTrailer((prev) => ({ ...prev, progress }))
         })
+
+        setTrailer((prev) => ({
+          ...prev,
+          status: 'processing',
+          progress: 100,
+        }))
+
+        const result = await pollMuxUpload(uploadId)
+
         setTrailer((prev) => ({
           ...prev,
           status: 'complete',
           muxAssetId: result.assetId,
           muxPlaybackId: result.playbackId,
         }))
-      } catch {
-        setTrailer((prev) => ({ ...prev, status: 'error' }))
+      } catch (error) {
+        setTrailer((prev) => ({
+          ...prev,
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Upload failed',
+        }))
       }
     }
+  }
+
+  const pollMuxUpload = async (uploadId: string) => {
+    const maxAttempts = 20
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const response = await getMuxUploadStatus(api, uploadId)
+      const data = unwrapApiResponse(response).data
+
+      if (data.status === 'errored') {
+        throw new Error('Mux processing failed')
+      }
+
+      if (data.assetId && data.playbackId) {
+        return {
+          assetId: data.assetId,
+          playbackId: data.playbackId,
+        }
+      }
+
+      await sleep(3000)
+    }
+
+    throw new Error('Mux processing timed out')
   }
 
   const removeFile = (type: 'video' | 'thumbnail' | 'trailer') => {
@@ -174,37 +287,70 @@ export function UploadForm() {
 
     setIsSubmitting(true)
     setSubmitStatus('idle')
+    setSubmitError(null)
 
     try {
-      // Stub: Send data to NestJS backend
+      const price = formData.isPremium ? Number(formData.price) : undefined
+      const releaseYear = Number(formData.releaseYear)
+      const thumbnailUrl =
+        thumbnail.publicUrl ||
+        (mainVideo.muxPlaybackId
+          ? createMuxThumbnailUrl(mainVideo.muxPlaybackId)
+          : '')
+
       const payload = {
-        ...formData,
-        mainVideoAssetId: mainVideo.muxAssetId,
-        mainVideoPlaybackId: mainVideo.muxPlaybackId,
-        thumbnailUrl: thumbnail.preview,
-        trailerAssetId: trailer.muxAssetId,
-        trailerPlaybackId: trailer.muxPlaybackId,
+        title: formData.title,
+        synopsis: formData.synopsis,
+        region: formData.region,
+        category: formData.category,
+        isPremium: formData.isPremium,
+        price: price && !Number.isNaN(price) ? price : undefined,
+        releaseYear: Number.isNaN(releaseYear)
+          ? new Date().getFullYear()
+          : releaseYear,
+        muxAssetId: mainVideo.muxAssetId,
+        muxPlaybackId: mainVideo.muxPlaybackId,
+        trailerMuxAssetId: trailer.muxAssetId,
+        trailerMuxPlaybackId: trailer.muxPlaybackId,
+        thumbnailUrl,
+        status: 'published',
       }
 
-      console.log('[v0] Upload payload:', payload)
+      if (!payload.muxAssetId || !payload.muxPlaybackId) {
+        throw new Error('Video upload is not ready yet')
+      }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      if (!payload.thumbnailUrl) {
+        throw new Error('Thumbnail upload is required')
+      }
+
+      const response = await createContent(api, payload)
+      unwrapApiResponse(response)
 
       setSubmitStatus('success')
-    } catch {
+      router.push('/library')
+      router.refresh()
+    } catch (error) {
       setSubmitStatus('error')
+      setSubmitError(
+        error instanceof Error ? error.message : 'Upload failed. Please try again.',
+      )
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const isFormValid =
-    formData.title &&
-    formData.synopsis &&
-    formData.region &&
-    formData.category &&
-    mainVideo.status === 'complete'
+  const isFormValid = useMemo(
+    () =>
+      Boolean(
+        formData.title &&
+          formData.synopsis &&
+          formData.region &&
+          formData.category &&
+          mainVideo.status === 'complete',
+      ),
+    [formData, mainVideo.status],
+  )
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -479,7 +625,7 @@ export function UploadForm() {
           {submitStatus === 'error' && (
             <p className="text-destructive flex items-center gap-2">
               <AlertCircle className="w-4 h-4" />
-              Upload failed. Please try again.
+              {submitError ?? 'Upload failed. Please try again.'}
             </p>
           )}
         </div>

@@ -1,17 +1,22 @@
 import type { ApiClient, ApiRequestOptions } from "@/api/client";
 import type { ApiResponse } from "@/api/types";
 
-export type UploadThumbnailResponse = {
-  url: string;
+export type ThumbnailUploadRequest = {
+  filename: string;
+  contentType: string;
 };
 
-export async function uploadThumbnail(
+export type UploadThumbnailResponse = {
+  uploadUrl: string;
+  key: string;
+  publicUrl: string;
+  expiresAt: Date;
+};
+
+export async function createThumbnailUpload(
   api: ApiClient,
-  file: File,
+  body: ThumbnailUploadRequest,
   options?: ApiRequestOptions
 ): Promise<ApiResponse<UploadThumbnailResponse>> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  return api.post("/upload/thumbnail", formData, { ...options, auth: true });
+  return api.post("/upload/thumbnail", body, { ...options, auth: true });
 }
