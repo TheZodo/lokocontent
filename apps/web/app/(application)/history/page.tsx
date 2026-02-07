@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { History, Clock, Trash2 } from "lucide-react";
+import { History, Clock, Trash2, X } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { VideoCard } from "@/components/lokocontent/video-card";
@@ -11,6 +11,7 @@ import type { VideoContent } from "@/lib/lokocontent-data";
 import { mapApiContentToVideoContent } from "@/lib/content-mappers";
 import {
   clearWatchHistory,
+  removeHistoryItem,
   getWatchHistory,
 } from "@/api/requests/history";
 import { getContentById } from "@/api/requests/content";
@@ -69,6 +70,15 @@ export default function HistoryPage() {
 
   const clearHistoryMutation = useApiMutation(
     (api) => clearWatchHistory(api),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["history", "list"] });
+      },
+    }
+  );
+
+  const removeHistoryItemMutation = useApiMutation(
+    (api, contentId: string) => removeHistoryItem(api, contentId),
     {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["history", "list"] });
@@ -194,6 +204,18 @@ export default function HistoryPage() {
                         video={item.content}
                         onClick={() => handleVideoClick(item.content)}
                       />
+                      <button
+                        type="button"
+                        className="absolute top-2 left-2 p-1.5 rounded-full bg-background/90 backdrop-blur-sm text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removeHistoryItemMutation.mutate(item.content.id);
+                        }}
+                        aria-label="Remove from history"
+                        disabled={removeHistoryItemMutation.isPending}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                       {/* Progress bar */}
                       {item.progress < 100 && (
                         <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted rounded-b-lg overflow-hidden">

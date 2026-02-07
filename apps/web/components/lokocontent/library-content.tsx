@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MoreVertical,
   Edit3,
@@ -16,6 +16,9 @@ import {
 import { cn } from "@/lib/utils";
 import { type VideoContent, regions, categories } from "@/lib/lokocontent-data";
 import { EditContentModal } from "./edit-content-modal";
+import { useApiQuery } from "@/api/query";
+import { getMyUploads, type CreatorUpload } from "@/api/requests/content";
+import { mapApiContentToVideoContent } from "@/lib/content-mappers";
 
 // Extended type for user's uploaded content
 interface UserContent extends VideoContent {
@@ -24,91 +27,24 @@ interface UserContent extends VideoContent {
   uploadDate: string;
 }
 
-// Mock user uploads data
-const mockUserUploads: UserContent[] = [
-  {
-    id: "user-1",
-    title: "My Journey Through Lagos",
-    creator: "You",
-    thumbnail: "/placeholder.svg?height=400&width=300",
-    duration: "1h 24m",
-    rating: 4.6,
-    isPremium: true,
-    region: "nollywood",
-    category: "documentaries",
-    synopsis:
-      "A personal documentary exploring the vibrant streets, culture, and people of Lagos, Nigeria.",
-    views: "12.4K",
-    releaseYear: 2024,
-    status: "published",
-    earnings: 245.5,
-    uploadDate: "2024-11-15",
-  },
-  {
-    id: "user-2",
-    title: "The Market Woman",
-    creator: "You",
-    thumbnail: "/placeholder.svg?height=400&width=300",
-    duration: "32m",
-    rating: 4.8,
-    isPremium: true,
-    region: "ghana",
-    category: "short-films",
-    synopsis:
-      "A touching short film about a market woman's daily struggles and triumphs in Accra.",
-    views: "8.2K",
-    releaseYear: 2024,
-    status: "published",
-    earnings: 178.25,
-    uploadDate: "2024-10-22",
-  },
-  {
-    id: "user-3",
-    title: "Sounds of the Savanna",
-    creator: "You",
-    thumbnail: "/placeholder.svg?height=400&width=300",
-    duration: "45m",
-    rating: 0,
-    isPremium: false,
-    region: "tanzania",
-    category: "documentaries",
-    synopsis:
-      "An audio-visual journey through the Serengeti, capturing the sounds of African wildlife.",
-    views: "0",
-    releaseYear: 2025,
-    status: "draft",
-    earnings: 0,
-    uploadDate: "2025-01-10",
-  },
-  {
-    id: "user-4",
-    title: "Nairobi Nights",
-    creator: "You",
-    thumbnail: "/placeholder.svg?height=400&width=300",
-    duration: "1h 05m",
-    rating: 4.3,
-    isPremium: true,
-    region: "riverwood",
-    category: "drama",
-    synopsis:
-      "A gripping drama set in the nightlife of Nairobi, exploring themes of ambition and identity.",
-    views: "5.1K",
-    releaseYear: 2024,
-    status: "hidden",
-    earnings: 89.0,
-    uploadDate: "2024-09-05",
-  },
-];
-
 type TabType = "all" | "published" | "drafts" | "hidden";
 type SortType = "recent" | "views" | "earnings" | "rating";
 
 export function LibraryContent() {
-  const [uploads, setUploads] = useState<UserContent[]>(mockUserUploads);
+  const [uploads, setUploads] = useState<UserContent[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [sortBy, setSortBy] = useState<SortType>("recent");
   const [editingContent, setEditingContent] = useState<UserContent | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const uploadsQuery = useApiQuery(["content", "my-uploads"], (api) =>
+    getMyUploads(api, { limit: 100 })
+  );
+
+  useEffect(() => {
+    if (!uploadsQuery.data) return;
+    const mappedUploads = uploadsQuery.data.data.map(mapUploadToUserContent);
+    setUploads(mappedUploads);
+  }, [uploadsQuery.data]);
 
   const tabs: { id: TabType; label: string; count: number }[] = [
     { id: "all", label: "All", count: uploads.length },
@@ -152,9 +88,6 @@ export function LibraryContent() {
   });
 
   const handleSaveContent = async (updatedContent: VideoContent) => {
-    // Stub: Save to backend
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
     setUploads((prev) =>
       prev.map((upload) =>
         upload.id === updatedContent.id
@@ -192,8 +125,12 @@ export function LibraryContent() {
     return categories.find((c) => c.id === categoryId)?.name || categoryId;
   };
 
-  const totalEarnings = uploads.reduce((sum, u) => sum + u.earnings, 0);
-  const totalViews = uploads.reduce((sum, u) => sum + parseViews(u.views), 0);
+  const totalEarnings =
+    uploadsQuery.data?.totalEarnings ??
+    uploads.reduce((sum, u) => sum + u.earnings, 0);
+  const totalViews =
+    uploadsQuery.data?.totalViews ??
+    uploads.reduce((sum, u) => sum + parseViews(u.views), 0);
 
   return (
     <div className="space-y-6">
@@ -286,7 +223,22 @@ export function LibraryContent() {
       </div>
 
       {/* Content Grid */}
-      {sortedUploads.length === 0 ? (
+      {uploadsQuery.isLoading ? (
+        <div className="text-center py-16">
+          <Film className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your uploads...</p>
+        </div>
+      ) : uploadsQuery.isError ? (
+        <div className="text-center py-16">
+          <Film className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
+            Unable to load uploads
+          </h3>
+          <p className="text-muted-foreground">
+            Please refresh and try again.
+          </p>
+        </div>
+      ) : sortedUploads.length === 0 ? (
         <div className="text-center py-16">
           <Film className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">
@@ -516,4 +468,19 @@ function formatDate(dateStr: string): string {
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
   if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
   return `${Math.floor(diffDays / 365)} years ago`;
+}
+
+function mapUploadToUserContent(upload: CreatorUpload): UserContent {
+  const base = mapApiContentToVideoContent(upload);
+  const createdAt =
+    typeof upload.createdAt === "string"
+      ? upload.createdAt
+      : upload.createdAt?.toISOString?.();
+
+  return {
+    ...base,
+    status: upload.status ?? "draft",
+    earnings: upload.earnings ?? 0,
+    uploadDate: createdAt || new Date().toISOString(),
+  };
 }

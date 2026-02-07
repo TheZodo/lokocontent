@@ -16,6 +16,15 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { regions, categories, type VideoContent } from "@/lib/lokocontent-data";
+import { useApiClient } from "@/api/use-api-client";
+import { unwrapApiResponse } from "@/api/client";
+import {
+  analyzeContentChanges,
+  updateContent,
+  type AnalyzeContentChangesInput,
+  type UpdateContentInput,
+} from "@/api/requests/content";
+import { createThumbnailUpload } from "@/api/requests/upload";
 
 interface EditContentModalProps {
   content: VideoContent;
@@ -30,87 +39,13 @@ interface ChangeWarning {
   message: string;
 }
 
-// Stub: LLM would analyze changes and return warnings
-async function analyzeChanges(
-  original: VideoContent,
-  updated: Partial<VideoContent>
-): Promise<ChangeWarning[]> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const warnings: ChangeWarning[] = [];
-
-  // Check title change
-  if (updated.title && updated.title !== original.title) {
-    const titleSimilarity = calculateSimilarity(original.title, updated.title);
-    if (titleSimilarity < 0.5) {
-      warnings.push({
-        field: "title",
-        severity: "high",
-        message:
-          "Major title change detected. This may confuse viewers who saved this content.",
-      });
-    } else if (titleSimilarity < 0.8) {
-      warnings.push({
-        field: "title",
-        severity: "medium",
-        message: "Significant title change. Consider if this affects discoverability.",
-      });
-    }
-  }
-
-  // Check synopsis change
-  if (updated.synopsis && updated.synopsis !== original.synopsis) {
-    const synopsisSimilarity = calculateSimilarity(
-      original.synopsis,
-      updated.synopsis
-    );
-    if (synopsisSimilarity < 0.3) {
-      warnings.push({
-        field: "synopsis",
-        severity: "high",
-        message:
-          "Synopsis has changed dramatically. Ensure it still accurately represents your content.",
-      });
-    }
-  }
-
-  // Check category change
-  if (updated.category && updated.category !== original.category) {
-    warnings.push({
-      field: "category",
-      severity: "medium",
-      message:
-        "Changing category will affect how viewers discover your content.",
-    });
-  }
-
-  // Check region change
-  if (updated.region && updated.region !== original.region) {
-    warnings.push({
-      field: "region",
-      severity: "medium",
-      message:
-        "Changing region may affect regional rankings and recommendations.",
-    });
-  }
-
-  return warnings;
-}
-
-// Simple similarity check (stub - real implementation would use LLM)
-function calculateSimilarity(str1: string, str2: string): number {
-  const words1 = str1.toLowerCase().split(/\s+/);
-  const words2 = str2.toLowerCase().split(/\s+/);
-  const commonWords = words1.filter((word) => words2.includes(word));
-  return commonWords.length / Math.max(words1.length, words2.length);
-}
-
 export function EditContentModal({
   content,
   isOpen,
   onClose,
   onSave,
 }: EditContentModalProps) {
+  const api = useApiClient();
   const [formData, setFormData] = useState({
     title: content.title,
     synopsis: content.synopsis,
@@ -123,6 +58,7 @@ export function EditContentModal({
   const [isSaving, setIsSaving] = useState(false);
   const [warnings, setWarnings] = useState<ChangeWarning[]>([]);
   const [showWarnings, setShowWarnings] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form when content changes
@@ -137,6 +73,7 @@ export function EditContentModal({
     setThumbnailFile(null);
     setWarnings([]);
     setShowWarnings(false);
+    setSaveError(null);
   }, [content]);
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,6 +99,27 @@ export function EditContentModal({
     );
   };
 
+  const buildChangedFields = (): AnalyzeContentChangesInput => {
+    const changes: AnalyzeContentChangesInput = {};
+    if (formData.title !== content.title) changes.title = formData.title;
+    if (formData.synopsis !== content.synopsis) changes.synopsis = formData.synopsis;
+    if (formData.region !== content.region) changes.region = formData.region;
+    if (formData.category !== content.category) changes.category = formData.category;
+    return changes;
+  };
+
+  const buildUpdatePayload = (thumbnailUrl?: string): UpdateContentInput => {
+    const payload: UpdateContentInput = {};
+    if (formData.title !== content.title) payload.title = formData.title;
+    if (formData.synopsis !== content.synopsis) payload.synopsis = formData.synopsis;
+    if (formData.region !== content.region) payload.region = formData.region;
+    if (formData.category !== content.category) payload.category = formData.category;
+    if (thumbnailUrl && thumbnailUrl !== content.thumbnail) {
+      payload.thumbnailUrl = thumbnailUrl;
+    }
+    return payload;
+  };
+
   const handleAnalyzeAndSave = async () => {
     if (!hasChanges()) {
       onClose();
@@ -169,33 +127,75 @@ export function EditContentModal({
     }
 
     setIsAnalyzing(true);
+    setSaveError(null);
     try {
-      const changeWarnings = await analyzeChanges(content, formData);
+      const changes = buildChangedFields();
+      const shouldAnalyze = Object.keys(changes).length > 0;
+      const changeWarnings = shouldAnalyze
+        ? unwrapApiResponse(await analyzeContentChanges(api, content.id, changes)).data
+            .warnings
+        : [];
+
       setWarnings(changeWarnings);
 
-      if (changeWarnings.some((w) => w.severity === "high" || w.severity === "medium")) {
+      if (changeWarnings.length > 0) {
         setShowWarnings(true);
-        setIsAnalyzing(false);
         return;
       }
 
       // No significant warnings, proceed with save
       await performSave();
     } catch {
+      setSaveError("We could not analyze your changes. Please try again.");
+    } finally {
       setIsAnalyzing(false);
     }
   };
 
   const performSave = async () => {
     setIsSaving(true);
+    setSaveError(null);
     try {
+      let thumbnailUrl = content.thumbnail;
+
+      if (thumbnailFile) {
+        const uploadResponse = await createThumbnailUpload(api, {
+          filename: thumbnailFile.name,
+          contentType: thumbnailFile.type,
+        });
+        const { uploadUrl, publicUrl } = unwrapApiResponse(uploadResponse).data;
+
+        const putResponse = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": thumbnailFile.type,
+          },
+          body: thumbnailFile,
+        });
+
+        if (!putResponse.ok) {
+          throw new Error("Thumbnail upload failed");
+        }
+
+        thumbnailUrl = publicUrl;
+      }
+
+      const updatePayload = buildUpdatePayload(thumbnailUrl);
+      if (Object.keys(updatePayload).length > 0) {
+        await unwrapApiResponse(await updateContent(api, content.id, updatePayload));
+      }
+
       const updatedContent: VideoContent = {
         ...content,
         ...formData,
-        thumbnail: thumbnailPreview || content.thumbnail,
+        thumbnail: thumbnailUrl,
       };
       await onSave(updatedContent);
       onClose();
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Unable to save changes."
+      );
     } finally {
       setIsSaving(false);
     }
@@ -428,6 +428,11 @@ export function EditContentModal({
           </Button>
 
           <div className="flex items-center gap-3">
+            {saveError && (
+              <span className="text-sm text-destructive-foreground">
+                {saveError}
+              </span>
+            )}
             {showWarnings ? (
               <>
                 <Button
