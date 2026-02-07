@@ -37,10 +37,12 @@ export class MuxController {
 
   @Post('upload-url')
   @UseGuards(ClerkAuthGuard, RolesGuard)
-  @Roles(Role.CREATOR, Role.ADMIN)
+  @Roles(Role.CREATOR, Role.ADMIN, Role.VIEWER)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create direct upload URL for video or trailer (CREATOR or ADMIN)' })
+  @ApiOperation({
+    summary: 'Create direct upload URL for video or trailer (CREATOR or ADMIN)',
+  })
   async createUploadUrl(
     @Body() dto: CreateUploadDto,
     @Req() req: Request,
