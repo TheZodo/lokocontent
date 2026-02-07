@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import {
   X,
@@ -37,6 +38,7 @@ interface ContentModalProps {
 export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
   if (!isOpen) return null
 
+  const router = useRouter()
   const api = useApiClient()
   const { getToken, isSignedIn } = useAuth()
   const [currentContent, setCurrentContent] = useState(video)
@@ -445,13 +447,12 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
                     setIsFetchingPlayback(true)
                     setPlaybackError(null)
                     try {
-                      const response = await getPlaybackUrl(
+                      await getPlaybackUrl(
                         api,
                         currentContent.muxPlaybackId,
                       )
-                      const { playbackUrl: signedUrl } =
-                        unwrapApiResponse(response).data
-                      setPlaybackUrl(signedUrl)
+                      onClose()
+                      router.push(`/watch/${currentContent.id}`)
                     } catch {
                       setPlaybackError('Unable to start playback.')
                     } finally {
