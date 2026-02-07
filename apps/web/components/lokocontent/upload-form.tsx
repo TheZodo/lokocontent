@@ -3,7 +3,7 @@
 import type React from 'react'
 import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import * as tus from 'tus-js-client'
+import * as UpChunk from '@mux/upchunk'
 import {
   Upload,
   Film,
@@ -58,32 +58,26 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const createMuxThumbnailUrl = (playbackId: string) =>
   `https://image.mux.com/${playbackId}/thumbnail.jpg`
 
-async function uploadFileToMux(
+async function uploadFileToMuxWithUpChunk(
   file: File,
   uploadUrl: string,
   onProgress: (progress: number) => void,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const upload = new tus.Upload(file, {
-      uploadUrl,
-      metadata: {
-        filename: file.name,
-        filetype: file.type,
-      },
-      retryDelays: [0, 2000, 5000, 10000],
-      onProgress: (bytesUploaded, bytesTotal) => {
-        const progress = Math.round((bytesUploaded / bytesTotal) * 100)
-        onProgress(progress)
-      },
-      onError: (error) => {
-        reject(error)
-      },
-      onSuccess: () => {
-        resolve()
-      },
+    const upload = UpChunk.createUpload({
+      endpoint: () => Promise.resolve(uploadUrl),
+      file,
+      chunkSize: 5120,
     })
-
-    upload.start()
+    upload.on('progress', (e: { detail: number }) => {
+      onProgress(typeof e.detail === 'number' ? e.detail : 0)
+    })
+    upload.on('success', () => resolve())
+    upload.on('error', (e: { detail?: unknown }) => {
+      reject(
+        e.detail instanceof Error ? e.detail : new Error(String(e.detail)),
+      )
+    })
   })
 }
 
@@ -143,12 +137,16 @@ export function UploadForm() {
     if (type === 'video') {
       setMainVideo({ file, preview, status: 'uploading', progress: 0 })
       try {
-        const uploadResponse = await createMuxUploadUrl(api, { type: 'video' })
+        const uploadResponse = await createMuxUploadUrl(api, {
+          type: 'video',
+          corsOrigin:
+            typeof window !== 'undefined' ? window.location.origin : undefined,
+        })
         const { uploadUrl, uploadId } = unwrapApiResponse(uploadResponse).data
 
         setMainVideo((prev) => ({ ...prev, uploadId }))
 
-        await uploadFileToMux(file, uploadUrl, (progress) => {
+        await uploadFileToMuxWithUpChunk(file, uploadUrl, (progress) => {
           setMainVideo((prev) => ({ ...prev, progress }))
         })
 
@@ -212,12 +210,14 @@ export function UploadForm() {
       try {
         const uploadResponse = await createMuxUploadUrl(api, {
           type: 'trailer',
+          corsOrigin:
+            typeof window !== 'undefined' ? window.location.origin : undefined,
         })
         const { uploadUrl, uploadId } = unwrapApiResponse(uploadResponse).data
 
         setTrailer((prev) => ({ ...prev, uploadId }))
 
-        await uploadFileToMux(file, uploadUrl, (progress) => {
+        await uploadFileToMuxWithUpChunk(file, uploadUrl, (progress) => {
           setTrailer((prev) => ({ ...prev, progress }))
         })
 

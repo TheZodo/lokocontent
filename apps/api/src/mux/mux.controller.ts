@@ -47,9 +47,12 @@ export class MuxController {
     @Body() dto: CreateUploadDto,
     @Req() req: Request,
   ): Promise<UploadUrlResponseDto> {
-    // Use provided corsOrigin or derive from request
-    const corsOrigin =
-      dto.corsOrigin || req.headers.origin || process.env.FRONTEND_URL || '*'
+    // Prefer explicit origin for CORS; avoid '*' so browser uploads succeed
+    const originFromDto = dto.corsOrigin?.trim() || undefined
+    const originFromHeader =
+      typeof req.headers.origin === 'string' ? req.headers.origin : undefined
+    const frontendUrl = process.env.FRONTEND_URL?.trim()?.replace(/\/$/, '')
+    const corsOrigin = originFromDto || originFromHeader || frontendUrl || '*'
 
     if (dto.type === UploadType.TRAILER) {
       return this.muxService.createTrailerUpload(corsOrigin)
@@ -110,7 +113,7 @@ export class MuxController {
 
   @Get('upload/:uploadId')
   @UseGuards(ClerkAuthGuard, RolesGuard)
-  @Roles(Role.CREATOR, Role.ADMIN)
+  @Roles(Role.CREATOR, Role.ADMIN, Role.VIEWER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get Mux upload status (CREATOR or ADMIN)' })
   async getUploadStatus(@Param('uploadId') uploadId: string) {
