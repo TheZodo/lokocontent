@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import {
   X,
   Star,
@@ -12,157 +12,163 @@ import {
   Lock,
   Loader2,
   AlertTriangle,
-} from "lucide-react";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { UnlockButton } from "./unlock-button";
-import type { VideoContent } from "@/lib/lokocontent-data";
-import { regions } from "@/lib/lokocontent-data";
-import { useApiClient } from "@/api/use-api-client";
-import { unwrapApiResponse } from "@/api/client";
-import { getContentById } from "@/api/requests/content";
-import { getPlaybackUrl } from "@/api/requests/mux";
-import { createPurchase } from "@/api/requests/purchases";
-import { rateContent, removeRating } from "@/api/requests/ratings";
-import { mapApiContentToVideoContent } from "@/lib/content-mappers";
-import { PaymentProvider } from "@lokocontent/db";
-import { updateWatchProgress } from "@/api/requests/history";
+} from 'lucide-react'
+import Image from 'next/image'
+import { Button } from '@/components/ui/button'
+import { UnlockButton } from './unlock-button'
+import type { VideoContent } from '@/lib/lokocontent-data'
+import { regions } from '@/lib/lokocontent-data'
+import { useApiClient } from '@/api/use-api-client'
+import { unwrapApiResponse } from '@/api/client'
+import { getContentById } from '@/api/requests/content'
+import { getPlaybackUrl } from '@/api/requests/mux'
+import { createPurchase } from '@/api/requests/purchases'
+import { rateContent, removeRating } from '@/api/requests/ratings'
+import { mapApiContentToVideoContent } from '@/lib/content-mappers'
+import { PaymentProvider } from '@lokocontent/db'
+import { updateWatchProgress } from '@/api/requests/history'
 
 interface ContentModalProps {
-  video: VideoContent;
-  isOpen: boolean;
-  onClose: () => void;
+  video: VideoContent
+  isOpen: boolean
+  onClose: () => void
 }
 
 export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
-  const api = useApiClient();
-  const { getToken, isSignedIn } = useAuth();
-  const [currentContent, setCurrentContent] = useState(video);
-  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
-  const [isFetchingPlayback, setIsFetchingPlayback] = useState(false);
-  const [playbackError, setPlaybackError] = useState<string | null>(null);
-  const [isPurchasing, setIsPurchasing] = useState(false);
-  const [purchaseError, setPurchaseError] = useState<string | null>(null);
-  const [isRating, setIsRating] = useState(false);
-  const [ratingError, setRatingError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const lastHistorySentAt = useRef(0);
-  const lastHistoryProgress = useRef(0);
+  const api = useApiClient()
+  const { getToken, isSignedIn } = useAuth()
+  const [currentContent, setCurrentContent] = useState(video)
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null)
+  const [isFetchingPlayback, setIsFetchingPlayback] = useState(false)
+  const [playbackError, setPlaybackError] = useState<string | null>(null)
+  const [isPurchasing, setIsPurchasing] = useState(false)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
+  const [isRating, setIsRating] = useState(false)
+  const [ratingError, setRatingError] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const lastHistorySentAt = useRef(0)
+  const lastHistoryProgress = useRef(0)
 
   useEffect(() => {
-    setCurrentContent(video);
-    setPlaybackUrl(null);
-    setPlaybackError(null);
-    setPurchaseError(null);
-    setRatingError(null);
-  }, [video]);
+    setCurrentContent(video)
+    setPlaybackUrl(null)
+    setPlaybackError(null)
+    setPurchaseError(null)
+    setRatingError(null)
+  }, [video])
 
   const refreshContent = async () => {
     try {
-      const token = isSignedIn ? await getToken() : null;
-      const response = await getContentById(api, video.id, { token });
-      const refreshed = mapApiContentToVideoContent(unwrapApiResponse(response).data);
-      setCurrentContent(refreshed);
+      const token = isSignedIn ? await getToken() : null
+      const response = await getContentById(api, video.id, { token })
+      const refreshed = mapApiContentToVideoContent(
+        unwrapApiResponse(response).data,
+      )
+      setCurrentContent(refreshed)
     } catch {
       // Best-effort refresh; keep existing content on failure.
     }
-  };
+  }
 
   const getProgressPercent = () => {
-    const videoEl = videoRef.current;
-    if (!videoEl || !Number.isFinite(videoEl.duration) || videoEl.duration <= 0) {
-      return null;
+    const videoEl = videoRef.current
+    if (
+      !videoEl ||
+      !Number.isFinite(videoEl.duration) ||
+      videoEl.duration <= 0
+    ) {
+      return null
     }
-    const percent = Math.round((videoEl.currentTime / videoEl.duration) * 100);
-    return Math.max(0, Math.min(100, percent));
-  };
+    const percent = Math.round((videoEl.currentTime / videoEl.duration) * 100)
+    return Math.max(0, Math.min(100, percent))
+  }
 
   const pushWatchHistory = async (force: boolean) => {
-    if (!isSignedIn) return;
-    const progress = getProgressPercent();
-    if (progress === null) return;
+    if (!isSignedIn) return
+    const progress = getProgressPercent()
+    if (progress === null) return
 
-    const now = Date.now();
-    const elapsed = now - lastHistorySentAt.current;
-    const progressDelta = Math.abs(progress - lastHistoryProgress.current);
+    const now = Date.now()
+    const elapsed = now - lastHistorySentAt.current
+    const progressDelta = Math.abs(progress - lastHistoryProgress.current)
 
     if (!force && elapsed < 10000 && progressDelta < 5) {
-      return;
+      return
     }
 
-    lastHistorySentAt.current = now;
-    lastHistoryProgress.current = progress;
+    lastHistorySentAt.current = now
+    lastHistoryProgress.current = progress
 
     try {
-      await updateWatchProgress(api, currentContent.id, { progress });
+      await updateWatchProgress(api, currentContent.id, { progress })
     } catch {
       // Best-effort history update.
     }
-  };
+  }
 
   useEffect(() => {
-    if (!isOpen) return;
-    refreshContent();
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
+    if (!isOpen) return
+    refreshContent()
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
       const successFlag =
-        params.get("success") === "true" ||
-        params.get("status") === "success" ||
-        params.get("purchase") === "success";
-      const contentId = params.get("contentId");
+        params.get('success') === 'true' ||
+        params.get('status') === 'success' ||
+        params.get('purchase') === 'success'
+      const contentId = params.get('contentId')
       if (successFlag && (!contentId || contentId === video.id)) {
-        refreshContent();
+        refreshContent()
       }
     }
-  }, [isOpen, video.id]);
+  }, [isOpen, video.id])
 
   useEffect(() => {
-    if (!playbackUrl) return;
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
+    if (!playbackUrl) return
+    const videoEl = videoRef.current
+    if (!videoEl) return
 
     const handleTimeUpdate = () => {
-      pushWatchHistory(false);
-    };
+      pushWatchHistory(false)
+    }
     const handlePause = () => {
-      pushWatchHistory(true);
-    };
+      pushWatchHistory(true)
+    }
     const handleEnded = () => {
-      pushWatchHistory(true);
-    };
+      pushWatchHistory(true)
+    }
 
-    videoEl.addEventListener("timeupdate", handleTimeUpdate);
-    videoEl.addEventListener("pause", handlePause);
-    videoEl.addEventListener("ended", handleEnded);
+    videoEl.addEventListener('timeupdate', handleTimeUpdate)
+    videoEl.addEventListener('pause', handlePause)
+    videoEl.addEventListener('ended', handleEnded)
 
     return () => {
-      videoEl.removeEventListener("timeupdate", handleTimeUpdate);
-      videoEl.removeEventListener("pause", handlePause);
-      videoEl.removeEventListener("ended", handleEnded);
-      pushWatchHistory(true);
-    };
-  }, [playbackUrl, currentContent.id]);
+      videoEl.removeEventListener('timeupdate', handleTimeUpdate)
+      videoEl.removeEventListener('pause', handlePause)
+      videoEl.removeEventListener('ended', handleEnded)
+      pushWatchHistory(true)
+    }
+  }, [playbackUrl, currentContent.id])
 
-  const region = regions.find((r) => r.id === currentContent.region);
-  const isLocked = currentContent.isPremium && !currentContent.isOwned;
-  const creatorName = currentContent.creator || "Lokocontent Creator";
+  const region = regions.find((r) => r.id === currentContent.region)
+  const isLocked = currentContent.isPremium && !currentContent.isOwned
+  const creatorName = currentContent.creator || 'Lokocontent Creator'
   const formattedPrice =
     currentContent.price !== undefined && currentContent.price !== null
       ? `$${currentContent.price.toFixed(2)}`
-      : undefined;
-  const hasPlaybackId = Boolean(currentContent.muxPlaybackId);
+      : undefined
+  const hasPlaybackId = Boolean(currentContent.muxPlaybackId)
   const displayRating = useMemo(
     () => (Number.isFinite(currentContent.rating) ? currentContent.rating : 0),
-    [currentContent.rating]
-  );
-  const ratingCount = currentContent.ratingCount ?? 0;
+    [currentContent.rating],
+  )
+  const ratingCount = currentContent.ratingCount ?? 0
 
   const handleClose = () => {
-    pushWatchHistory(true);
-    onClose();
-  };
+    pushWatchHistory(true)
+    onClose()
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -170,7 +176,7 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
       <div
         className="absolute inset-0 bg-background/80 backdrop-blur-md"
         onClick={handleClose}
-        onKeyDown={(e) => e.key === "Escape" && handleClose()}
+        onKeyDown={(e) => e.key === 'Escape' && handleClose()}
         role="button"
         tabIndex={0}
         aria-label="Close modal"
@@ -205,16 +211,16 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
                 </video>
               ) : (
                 <Image
-                  src={currentContent.thumbnail || "/placeholder.svg"}
+                  src={currentContent.thumbnail || '/placeholder.svg'}
                   alt={currentContent.title}
                   fill
-                  className={`object-cover ${isLocked ? "blur-sm" : ""}`}
+                  className={`object-cover ${isLocked ? 'blur-sm' : ''}`}
                 />
               )}
 
               {/* Gradient Overlays */}
-              <div className="absolute inset-0 bg-gradient-to-t from-loko-surface via-transparent to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-loko-surface lg:block hidden" />
+              <div className="absolute inset-0 bg-linear-to-t from-loko-surface via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-r from-transparent via-transparent to-loko-surface lg:block hidden" />
 
               {/* Lock Overlay for Premium */}
               {isLocked && !playbackUrl && (
@@ -249,7 +255,7 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
                 <div className="px-3 py-1 rounded-full bg-loko-gold/20 border border-loko-gold/30">
                   <div className="flex items-center gap-1.5 text-loko-gold text-sm font-medium">
                     <Lock className="w-3.5 h-3.5" />
-                    {currentContent.isOwned ? "Owned Premium" : "Premium"}
+                    {currentContent.isOwned ? 'Owned Premium' : 'Premium'}
                   </div>
                 </div>
               </div>
@@ -274,7 +280,7 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4" />
-                <span>{currentContent.duration || "—"}</span>
+                <span>{currentContent.duration || '—'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Globe className="w-4 h-4" />
@@ -287,7 +293,7 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
 
             {/* Creator */}
             <div className="flex items-center gap-3 mb-6 p-3 rounded-lg bg-secondary/50">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-loko-teal to-loko-purple flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-loko-teal to-loko-purple flex items-center justify-center">
                 <User className="w-5 h-5 text-foreground" />
               </div>
               <div>
@@ -310,12 +316,14 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
             <div className="flex items-center gap-6 mb-8 text-sm">
               <div>
                 <p className="text-muted-foreground">Views</p>
-                <p className="font-semibold text-foreground">{currentContent.views}</p>
+                <p className="font-semibold text-foreground">
+                  {currentContent.views}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Category</p>
                 <p className="font-semibold text-foreground capitalize">
-                  {currentContent.category.replace("-", " ")}
+                  {currentContent.category.replace('-', ' ')}
                 </p>
               </div>
             </div>
@@ -332,21 +340,21 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                     disabled={isRating}
                     onClick={async () => {
-                      setIsRating(true);
-                      setRatingError(null);
+                      setIsRating(true)
+                      setRatingError(null)
                       try {
                         await unwrapApiResponse(
-                          await removeRating(api, currentContent.id)
-                        );
+                          await removeRating(api, currentContent.id),
+                        )
                         setCurrentContent((prev) => ({
                           ...prev,
                           userRating: null,
-                        }));
-                        await refreshContent();
+                        }))
+                        await refreshContent()
                       } catch {
-                        setRatingError("Unable to remove rating.");
+                        setRatingError('Unable to remove rating.')
                       } finally {
-                        setIsRating(false);
+                        setIsRating(false)
                       }
                     }}
                   >
@@ -362,31 +370,35 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
                     className="p-1"
                     disabled={isRating}
                     onClick={async () => {
-                      setIsRating(true);
-                      setRatingError(null);
+                      setIsRating(true)
+                      setRatingError(null)
                       try {
-                        const response = await rateContent(api, currentContent.id, {
-                          rating: value,
-                        });
-                        const data = unwrapApiResponse(response).data;
+                        const response = await rateContent(
+                          api,
+                          currentContent.id,
+                          {
+                            rating: value,
+                          },
+                        )
+                        const data = unwrapApiResponse(response).data
                         setCurrentContent((prev) => ({
                           ...prev,
                           userRating: value,
                           rating: data.averageRating,
                           ratingCount: data.ratingCount,
-                        }));
+                        }))
                       } catch {
-                        setRatingError("Unable to submit rating.");
+                        setRatingError('Unable to submit rating.')
                       } finally {
-                        setIsRating(false);
+                        setIsRating(false)
                       }
                     }}
                   >
                     <Star
                       className={`w-5 h-5 ${
                         (currentContent.userRating ?? 0) >= value
-                          ? "text-loko-gold fill-loko-gold"
-                          : "text-muted-foreground"
+                          ? 'text-loko-gold fill-loko-gold'
+                          : 'text-muted-foreground'
                       }`}
                     />
                   </button>
@@ -406,21 +418,21 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
                 <UnlockButton
                   price={formattedPrice}
                   onClick={async () => {
-                    setIsPurchasing(true);
-                    setPurchaseError(null);
+                    setIsPurchasing(true)
+                    setPurchaseError(null)
                     try {
                       const response = await createPurchase(api, {
                         contentId: currentContent.id,
                         paymentProvider: PaymentProvider.STRIPE,
-                      });
-                      const { checkoutUrl } = unwrapApiResponse(response).data;
-                      if (typeof window !== "undefined") {
-                        window.location.assign(checkoutUrl);
+                      })
+                      const { checkoutUrl } = unwrapApiResponse(response).data
+                      if (typeof window !== 'undefined') {
+                        window.location.assign(checkoutUrl)
                       }
                     } catch {
-                      setPurchaseError("Unable to start checkout.");
+                      setPurchaseError('Unable to start checkout.')
                     } finally {
-                      setIsPurchasing(false);
+                      setIsPurchasing(false)
                     }
                   }}
                 />
@@ -429,21 +441,21 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
                   className="w-full bg-loko-gold hover:bg-loko-gold/90 text-background font-semibold py-6"
                   disabled={isFetchingPlayback || !hasPlaybackId}
                   onClick={async () => {
-                    if (!currentContent.muxPlaybackId) return;
-                    setIsFetchingPlayback(true);
-                    setPlaybackError(null);
+                    if (!currentContent.muxPlaybackId) return
+                    setIsFetchingPlayback(true)
+                    setPlaybackError(null)
                     try {
                       const response = await getPlaybackUrl(
                         api,
-                        currentContent.muxPlaybackId
-                      );
+                        currentContent.muxPlaybackId,
+                      )
                       const { playbackUrl: signedUrl } =
-                        unwrapApiResponse(response).data;
-                      setPlaybackUrl(signedUrl);
+                        unwrapApiResponse(response).data
+                      setPlaybackUrl(signedUrl)
                     } catch {
-                      setPlaybackError("Unable to start playback.");
+                      setPlaybackError('Unable to start playback.')
                     } finally {
-                      setIsFetchingPlayback(false);
+                      setIsFetchingPlayback(false)
                     }
                   }}
                 >
@@ -476,5 +488,5 @@ export function ContentModal({ video, isOpen, onClose }: ContentModalProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }
