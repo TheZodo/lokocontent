@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { HeroCarousel } from '@/components/lokocontent/hero-carousel'
@@ -69,7 +69,7 @@ const HeroSkeleton = () => (
   </section>
 )
 
-export default function BrowsePage() {
+function BrowsePageContent() {
   const searchParams = useSearchParams()
   const { getToken, isSignedIn } = useAuth()
   const [selectedVideo, setSelectedVideo] = useState<VideoContent | null>(null)
@@ -258,5 +258,21 @@ export default function BrowsePage() {
         />
       )}
     </>
+  )
+}
+
+const BrowsePageFallback = () => (
+  <div className="px-4 lg:px-6 py-6 space-y-10">
+    <HeroSkeleton />
+    <SwimlaneSkeleton title="Trending" />
+    <SwimlaneSkeleton title="New Releases" />
+  </div>
+)
+
+export default function BrowsePage() {
+  return (
+    <Suspense fallback={<BrowsePageFallback />}>
+      <BrowsePageContent />
+    </Suspense>
   )
 }
