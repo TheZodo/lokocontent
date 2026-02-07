@@ -180,8 +180,7 @@ export function UploadForm() {
           filename: file.name,
           contentType: file.type,
         })
-        const { uploadUrl, publicUrl } =
-          unwrapApiResponse(uploadResponse).data
+        const { uploadUrl, publicUrl } = unwrapApiResponse(uploadResponse).data
 
         const response = await fetch(uploadUrl, {
           method: 'PUT',
@@ -334,7 +333,9 @@ export function UploadForm() {
     } catch (error) {
       setSubmitStatus('error')
       setSubmitError(
-        error instanceof Error ? error.message : 'Upload failed. Please try again.',
+        error instanceof Error
+          ? error.message
+          : 'Upload failed. Please try again.',
       )
     } finally {
       setIsSubmitting(false)
@@ -345,10 +346,10 @@ export function UploadForm() {
     () =>
       Boolean(
         formData.title &&
-          formData.synopsis &&
-          formData.region &&
-          formData.category &&
-          mainVideo.status === 'complete',
+        formData.synopsis &&
+        formData.region &&
+        formData.category &&
+        mainVideo.status === 'complete',
       ),
     [formData, mainVideo.status],
   )
