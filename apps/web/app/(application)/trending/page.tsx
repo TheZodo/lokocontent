@@ -5,6 +5,7 @@ import { TrendingUp, Flame } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { VideoCard } from "@/components/lokocontent/video-card";
 import { ContentModal } from "@/components/lokocontent/content-modal";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { VideoContent } from "@/lib/lokocontent-data";
 import { mapApiContentToVideoContent } from "@/lib/content-mappers";
 import { getContentById, getTrendingContent } from "@/api/requests/content";
@@ -71,8 +72,14 @@ export default function TrendingPage() {
         </div>
 
         {trendingQuery.isLoading && (
-          <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
-            Loading trending content…
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <div key={`trending-skeleton-${index}`} className="relative">
+                <Skeleton className="aspect-[3/4] w-full rounded-lg mb-3" />
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
           </div>
         )}
         {trendingQuery.isError && (
