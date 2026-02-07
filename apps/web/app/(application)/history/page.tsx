@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { VideoCard } from "@/components/lokocontent/video-card";
 import { ContentModal } from "@/components/lokocontent/content-modal";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { VideoContent } from "@/lib/lokocontent-data";
 import { mapApiContentToVideoContent } from "@/lib/content-mappers";
 import {
@@ -57,6 +58,28 @@ const formatRelativeTime = (date: Date) => {
   const diffDays = Math.floor(diffHours / 24);
   return `${diffDays}d ago`;
 };
+
+const HistorySkeleton = () => (
+  <div className="space-y-8">
+    {Array.from({ length: 2 }).map((_, sectionIndex) => (
+      <div key={`history-skeleton-section-${sectionIndex}`}>
+        <div className="flex items-center gap-2 mb-4">
+          <Skeleton className="h-4 w-4 rounded-full" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((__, index) => (
+            <div key={`history-skeleton-card-${sectionIndex}-${index}`}>
+              <Skeleton className="aspect-[3/4] w-full rounded-lg mb-3" />
+              <Skeleton className="h-4 w-3/4 mb-2" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 export default function HistoryPage() {
   const { getToken, isSignedIn } = useAuth();
@@ -173,9 +196,7 @@ export default function HistoryPage() {
         </div>
 
         {historyQuery.isLoading && (
-          <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
-            Loading watch history…
-          </div>
+          <HistorySkeleton />
         )}
 
         {historyQuery.isError && (

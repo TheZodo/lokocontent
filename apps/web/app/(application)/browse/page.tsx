@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { HeroCarousel } from "@/components/lokocontent/hero-carousel";
 import { Swimlane } from "@/components/lokocontent/swimlane";
 import { ContentModal } from "@/components/lokocontent/content-modal";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { VideoContent } from "@/lib/lokocontent-data";
 import { mapApiContentToVideoContent } from "@/lib/content-mappers";
 import {
@@ -21,6 +22,46 @@ const buildFilters = (region: string, category: string) => ({
   ...(region && region !== "all" ? { region } : null),
   ...(category && category !== "all" ? { category } : null),
 });
+
+const SwimlaneSkeleton = ({ title, count = 6 }: { title: string; count?: number }) => (
+  <section className="relative">
+    <div className="flex items-center justify-between mb-4">
+      <Skeleton className="h-6 w-40" />
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-9 w-9 rounded-full" />
+        <Skeleton className="h-9 w-9 rounded-full" />
+      </div>
+    </div>
+    <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-4">
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={`swimlane-skeleton-${title}-${index}`} className="w-[200px]">
+          <Skeleton className="aspect-[3/4] w-full rounded-lg mb-3" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-3 w-2/3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+);
+
+const HeroSkeleton = () => (
+  <section className="relative h-[400px] md:h-[500px] rounded-xl overflow-hidden">
+    <Skeleton className="absolute inset-0" />
+    <div className="relative h-full flex flex-col justify-end p-6 md:p-10 max-w-2xl space-y-4">
+      <Skeleton className="h-5 w-24" />
+      <Skeleton className="h-10 w-3/4" />
+      <Skeleton className="h-4 w-1/2" />
+      <Skeleton className="h-20 w-full" />
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-12 w-32 rounded-lg" />
+        <Skeleton className="h-12 w-32 rounded-lg" />
+      </div>
+    </div>
+  </section>
+);
 
 export default function BrowsePage() {
   const searchParams = useSearchParams();
@@ -127,11 +168,7 @@ export default function BrowsePage() {
     items: VideoContent[]
   ) => {
     if (query.isLoading) {
-      return (
-        <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
-          Loading {title.toLowerCase()}…
-        </div>
-      );
+      return <SwimlaneSkeleton title={title} />;
     }
     if (query.isError) {
       return (
@@ -166,9 +203,7 @@ export default function BrowsePage() {
                 Search results for “{searchQuery}”
               </h2>
               {searchResultsQuery.isLoading && (
-                <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
-                  Searching content…
-                </div>
+                <SwimlaneSkeleton title="Search Results" count={8} />
               )}
               {searchResultsQuery.isError && (
                 <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
@@ -192,9 +227,7 @@ export default function BrowsePage() {
           )}
 
           {featuredQuery.isLoading && (
-            <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
-              Loading featured content…
-            </div>
+            <HeroSkeleton />
           )}
           {featuredQuery.isError && (
             <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">

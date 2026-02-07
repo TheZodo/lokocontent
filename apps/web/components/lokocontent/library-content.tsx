@@ -19,6 +19,7 @@ import { EditContentModal } from "./edit-content-modal";
 import { useApiQuery } from "@/api/query";
 import { getMyUploads, type CreatorUpload } from "@/api/requests/content";
 import { mapApiContentToVideoContent } from "@/lib/content-mappers";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Extended type for user's uploaded content
 interface UserContent extends VideoContent {
@@ -131,6 +132,48 @@ export function LibraryContent() {
   const totalViews =
     uploadsQuery.data?.totalViews ??
     uploads.reduce((sum, u) => sum + parseViews(u.views), 0);
+
+  if (uploadsQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={`stats-skeleton-${index}`}
+              className="p-4 rounded-xl bg-loko-surface border border-border"
+            >
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-lg" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={`upload-skeleton-${index}`}
+              className="rounded-xl bg-loko-surface border border-border overflow-hidden"
+            >
+              <Skeleton className="aspect-video w-full" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+                <div className="flex items-center gap-3 pt-2">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
