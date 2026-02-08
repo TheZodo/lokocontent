@@ -30,9 +30,15 @@ async function bootstrap() {
   // Helmet - security headers
   app.use(helmet())
 
-  // CORS - allow frontend origins
+  // CORS - allow frontend origins (array = multiple origins allowed)
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://lokocontent-web.vercel.app',
+    'https://lokocontent.io',
+    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ]
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
   })
 
