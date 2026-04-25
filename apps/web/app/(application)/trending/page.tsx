@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TrendingUp, Flame } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { VideoCard } from "@/components/lokocontent/video-card";
@@ -10,8 +11,10 @@ import type { VideoContent } from "@/lib/lokocontent-data";
 import { mapApiContentToVideoContent } from "@/lib/content-mappers";
 import { getContentById, getTrendingContent } from "@/api/requests/content";
 import { useApiQuery } from "@/api/query";
+import { canNavigateDirectToWatch } from "@/lib/watch-eligibility";
 
 export default function TrendingPage() {
+  const router = useRouter();
   const { getToken, isSignedIn } = useAuth();
   const [selectedVideo, setSelectedVideo] = useState<VideoContent | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
@@ -44,6 +47,10 @@ export default function TrendingPage() {
   }, [contentDetailsQuery.data, selectedVideoId]);
 
   const handleVideoClick = (video: VideoContent) => {
+    if (canNavigateDirectToWatch(video)) {
+      router.push(`/watch/${video.id}`);
+      return;
+    }
     setSelectedVideo(video);
     setSelectedVideoId(video.id);
   };

@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { HeroCarousel } from '@/components/lokocontent/hero-carousel'
 import { Swimlane } from '@/components/lokocontent/swimlane'
@@ -17,6 +17,7 @@ import {
   searchContent,
 } from '@/api/requests/content'
 import { useApiQuery } from '@/api/query'
+import { canNavigateDirectToWatch } from '@/lib/watch-eligibility'
 
 const buildFilters = (region: string, category: string) => ({
   ...(region && region !== 'all' ? { region } : null),
@@ -70,6 +71,7 @@ const HeroSkeleton = () => (
 )
 
 function BrowsePageContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const { getToken, isSignedIn } = useAuth()
   const [selectedVideo, setSelectedVideo] = useState<VideoContent | null>(null)
@@ -159,9 +161,29 @@ function BrowsePageContent() {
     }
   }, [contentDetailsQuery.data, selectedVideoId])
 
-  const handleVideoClick = (video: VideoContent) => {
+  const openContentModal = (video: VideoContent) => {
     setSelectedVideo(video)
     setSelectedVideoId(video.id)
+  }
+
+  const handleVideoClick = (video: VideoContent) => {
+    if (canNavigateDirectToWatch(video)) {
+      router.push(`/watch/${video.id}`)
+      return
+    }
+    openContentModal(video)
+  }
+
+  const handleHeroWatchNow = (video: VideoContent) => {
+    if (canNavigateDirectToWatch(video)) {
+      router.push(`/watch/${video.id}`)
+      return
+    }
+    openContentModal(video)
+  }
+
+  const handleHeroMoreInfo = (video: VideoContent) => {
+    openContentModal(video)
   }
 
   const handleCloseModal = () => {
@@ -240,7 +262,8 @@ function BrowsePageContent() {
             featuredItems.length > 0 && (
               <HeroCarousel
                 items={featuredItems}
-                onItemClick={handleVideoClick}
+                onWatchNow={handleHeroWatchNow}
+                onMoreInfo={handleHeroMoreInfo}
               />
             )}
 

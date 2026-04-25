@@ -1,7 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import {
+  type ComponentRef,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+import { useParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import MuxPlayer from '@mux/mux-player-react'
 import { ArrowLeft, Lock, Loader2, AlertTriangle } from 'lucide-react'
@@ -17,6 +24,7 @@ import type { VideoContent } from '@/lib/lokocontent-data'
 import { UnlockButton } from '@/components/lokocontent/unlock-button'
 import { createPurchase } from '@/api/requests/purchases'
 import { PaymentProvider } from '@lokocontent/db'
+import { cn } from '@/lib/utils'
 
 type WatchState =
   | { status: 'loading' }
@@ -27,9 +35,47 @@ type WatchState =
 const HISTORY_THROTTLE_MS = 10_000
 const HISTORY_PROGRESS_DELTA = 5
 
+function WatchChromeShell({
+  children,
+  title,
+}: {
+  children: ReactNode
+  title?: string
+}) {
+  return (
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-black text-white">
+      <header
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-0 z-20 flex shrink-0 items-center gap-2',
+          'bg-gradient-to-b from-black/85 via-black/40 to-transparent px-2 pb-10 pt-2 sm:px-3 sm:pt-3',
+        )}
+      >
+        <div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-2">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-white hover:bg-white/10 hover:text-white"
+            aria-label="Back to browse"
+          >
+            <Link href="/browse">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          {title ? (
+            <h1 className="truncate text-sm font-medium text-white/95 sm:text-base" title={title}>
+              {title}
+            </h1>
+          ) : null}
+        </div>
+      </header>
+      {children}
+    </div>
+  )
+}
+
 export default function WatchPage() {
   const params = useParams()
-  const router = useRouter()
   const api = useApiClient()
   const { getToken, isSignedIn, userId } = useAuth()
   const contentId = typeof params?.contentId === 'string' ? params.contentId : null
@@ -37,7 +83,7 @@ export default function WatchPage() {
   const [state, setState] = useState<WatchState>({ status: 'loading' })
   const lastHistorySentAt = useRef(0)
   const lastHistoryProgress = useRef(0)
-  const playerRef = useRef<HTMLMediaElement | null>(null)
+  const playerRef = useRef<ComponentRef<typeof MuxPlayer> | null>(null)
 
   const pushWatchProgress = useCallback(
     async (progress: number, force: boolean) => {
@@ -56,7 +102,7 @@ export default function WatchPage() {
         // Best-effort
       }
     },
-    [api, contentId, isSignedIn]
+    [api, contentId, isSignedIn],
   )
 
   useEffect(() => {
@@ -105,7 +151,8 @@ export default function WatchPage() {
 
   const handleTimeUpdate = useCallback(() => {
     const el = playerRef.current
-    if (!el || typeof el.currentTime !== 'number' || !Number.isFinite(el.duration) || el.duration <= 0) return
+    if (!el || typeof el.currentTime !== 'number' || !Number.isFinite(el.duration) || el.duration <= 0)
+      return
     const percent = Math.round((el.currentTime / el.duration) * 100)
     const clamped = Math.max(0, Math.min(100, percent))
     pushWatchProgress(clamped, false)
@@ -113,7 +160,8 @@ export default function WatchPage() {
 
   const handlePause = useCallback(() => {
     const el = playerRef.current
-    if (!el || typeof el.currentTime !== 'number' || !Number.isFinite(el.duration) || el.duration <= 0) return
+    if (!el || typeof el.currentTime !== 'number' || !Number.isFinite(el.duration) || el.duration <= 0)
+      return
     const percent = Math.round((el.currentTime / el.duration) * 100)
     pushWatchProgress(Math.max(0, Math.min(100, percent)), true)
   }, [pushWatchProgress])
@@ -124,33 +172,39 @@ export default function WatchPage() {
 
   if (!contentId) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
-        <p className="text-muted-foreground">Invalid watch URL.</p>
-        <Button asChild variant="outline">
-          <Link href="/browse">Back to Browse</Link>
-        </Button>
-      </div>
+      <WatchChromeShell>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+          <p className="text-sm text-zinc-400">Invalid watch URL.</p>
+          <Button asChild variant="outline" className="border-white/25 text-white hover:bg-white/10">
+            <Link href="/browse">Back to Browse</Link>
+          </Button>
+        </div>
+      </WatchChromeShell>
     )
   }
 
   if (state.status === 'loading') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
-        <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
+      <WatchChromeShell>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-zinc-500" />
+          <p className="text-sm text-zinc-400">Loading…</p>
+        </div>
+      </WatchChromeShell>
     )
   }
 
   if (state.status === 'not_found') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
-        <AlertTriangle className="w-12 h-12 text-muted-foreground" />
-        <p className="text-muted-foreground">Content not found.</p>
-        <Button asChild variant="outline">
-          <Link href="/browse">Back to Browse</Link>
-        </Button>
-      </div>
+      <WatchChromeShell>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+          <AlertTriangle className="h-12 w-12 text-zinc-500" />
+          <p className="text-sm text-zinc-400">Content not found.</p>
+          <Button asChild variant="outline" className="border-white/25 text-white hover:bg-white/10">
+            <Link href="/browse">Back to Browse</Link>
+          </Button>
+        </div>
+      </WatchChromeShell>
     )
   }
 
@@ -161,41 +215,43 @@ export default function WatchPage() {
         ? `$${content.price.toFixed(2)}`
         : '$4.99'
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6">
-        <div className="flex flex-col items-center gap-2 text-center max-w-md">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-            <Lock className="w-8 h-8 text-muted-foreground" />
+      <WatchChromeShell title={content.title}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 overflow-auto p-6 text-center">
+          <div className="flex max-w-md flex-col items-center gap-2">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
+              <Lock className="h-8 w-8 text-zinc-300" />
+            </div>
+            <h1 className="text-xl font-semibold text-white">{content.title}</h1>
+            <p className="text-sm text-zinc-400">
+              This is premium content. Purchase access to watch in full.
+            </p>
           </div>
-          <h1 className="text-xl font-semibold text-foreground">{content.title}</h1>
-          <p className="text-muted-foreground">
-            This is premium content. Purchase access to watch in full.
-          </p>
-        </div>
-        <UnlockButton
-          price={formattedPrice}
-          onClick={async () => {
-            try {
-              const token = isSignedIn ? await getToken() : null
-              const response = await createPurchase(api, {
-                contentId: content.id,
-                paymentProvider: PaymentProvider.STRIPE,
-              })
-              const { checkoutUrl } = unwrapApiResponse(response).data
-              if (typeof window !== 'undefined') {
-                window.location.assign(checkoutUrl)
+          <UnlockButton
+            price={formattedPrice}
+            onClick={async () => {
+              try {
+                const token = isSignedIn ? await getToken() : null
+                const response = await createPurchase(api, {
+                  contentId: content.id,
+                  paymentProvider: PaymentProvider.STRIPE,
+                })
+                const { checkoutUrl } = unwrapApiResponse(response).data
+                if (typeof window !== 'undefined') {
+                  window.location.assign(checkoutUrl)
+                }
+              } catch {
+                // Error could be shown via toast
               }
-            } catch {
-              // Error could be shown via toast
-            }
-          }}
-        />
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/browse" className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Browse
-          </Link>
-        </Button>
-      </div>
+            }}
+          />
+          <Button asChild variant="ghost" size="sm" className="text-zinc-300 hover:bg-white/10 hover:text-white">
+            <Link href="/browse" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Browse
+            </Link>
+          </Button>
+        </div>
+      </WatchChromeShell>
     )
   }
 
@@ -203,19 +259,9 @@ export default function WatchPage() {
   const playbackId = content.muxPlaybackId!
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="sticky top-0 z-10 flex items-center gap-2 p-2 bg-background/80 backdrop-blur-sm border-b border-border">
-        <Button asChild variant="ghost" size="icon" aria-label="Back to browse">
-          <Link href="/browse">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-        </Button>
-        <h1 className="text-sm font-medium truncate flex-1" title={content.title}>
-          {content.title}
-        </h1>
-      </div>
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-5xl aspect-video bg-black rounded-lg overflow-hidden">
+    <WatchChromeShell title={content.title}>
+      <div className="relative flex min-h-0 flex-1 w-full items-center justify-center bg-black">
+        <div className="absolute inset-0 flex items-center justify-center p-0">
           <MuxPlayer
             ref={playerRef}
             playbackId={playbackId}
@@ -228,10 +274,10 @@ export default function WatchPage() {
             onPause={handlePause}
             onEnded={handleEnded}
             streamType="on-demand"
-            className="w-full h-full"
+            className="h-full w-full max-h-full max-w-full"
           />
         </div>
       </div>
-    </div>
+    </WatchChromeShell>
   )
 }
