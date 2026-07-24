@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { EarningsQueryDto } from './dto/earnings-query.dto'
 import { PurchaseStatus } from '@lokocontent/db'
+import { UsageService } from '../usage'
 
 const PERIOD_CONFIG = {
   week: { days: 7, label: 'day' as const },
@@ -11,7 +12,10 @@ const PERIOD_CONFIG = {
 
 @Injectable()
 export class AnalyticsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly usageService: UsageService,
+  ) {}
 
   async getOverview(userId: string) {
     const [contentAgg, earningsAgg, followersCount, ratingsAgg] =
@@ -39,8 +43,16 @@ export class AnalyticsService {
         }),
       ])
 
+    const usage = await this.usageService.getCreatorOverviewUsage(userId)
+
     return {
       totalViews: contentAgg._sum.views ?? 0,
+      settledViews: usage.settledViews,
+      provisionalViews: usage.provisionalViews,
+      liveViewers: usage.liveViewers,
+      watchMinutes: usage.watchMinutes,
+      playingMinutes: usage.playingMinutes,
+      lastAnalyticsSyncAt: usage.lastAnalyticsSyncAt,
       totalEarnings: earningsAgg._sum.creatorEarnings ?? 0,
       totalContent: contentAgg._count._all ?? 0,
       averageRating: ratingsAgg._avg.rating ?? 0,
@@ -88,6 +100,13 @@ export class AnalyticsService {
     const total = data.reduce((sum, entry) => sum + entry.amount, 0)
 
     return { data, total }
+  }
+
+  async getUsage(
+    userId: string,
+    query: { period?: 'day' | 'week' | 'month' | 'year' },
+  ) {
+    return this.usageService.getCreatorUsage(userId, query.period ?? 'month')
   }
 
   private buildBuckets(start: Date, period: 'week' | 'month' | 'year') {

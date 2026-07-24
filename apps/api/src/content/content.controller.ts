@@ -31,12 +31,16 @@ import { Roles } from '../common/decorators/roles.decorator'
 import { Role } from '@lokocontent/db'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { EnsureCreatorRoleGuard } from './guards/ensure-creator.guard'
+import { UsageService } from '../usage'
 
 @ApiTags('Content')
 @Controller('content')
 @UseFilters(ApiExceptionFilter)
 export class ContentController {
-  constructor(private readonly contentService: ContentService) {}
+  constructor(
+    private readonly contentService: ContentService,
+    private readonly usageService: UsageService,
+  ) {}
 
   @Get('featured')
   @ApiOperation({ summary: 'Get featured content (limit 5)' })
@@ -124,6 +128,22 @@ export class ContentController {
         limit,
         page: Math.floor(offset / limit) + 1,
       },
+    }
+  }
+
+  @Get(':id/analytics')
+  @UseGuards(ClerkAuthGuard, RolesGuard)
+  @Roles(Role.CREATOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get per-content analytics' })
+  async getContentAnalytics(
+    @CurrentUser() userId: string,
+    @Param('id') id: string,
+  ) {
+    const analytics = await this.usageService.getContentAnalytics(userId, id)
+    return {
+      success: true,
+      data: analytics,
     }
   }
 

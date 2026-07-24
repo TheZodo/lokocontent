@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Request } from 'express'
+import { randomUUID } from 'crypto'
 import { PrismaService } from '../prisma'
 import { ClerkService } from './clerk.service'
 import { Role } from '@lokocontent/db'
@@ -109,6 +110,7 @@ export class ClerkWebhookController {
       data: {
         id: data.id,
         email,
+        analyticsViewerId: `viewer_${randomUUID()}`,
         displayName,
         profilePicture: data.image_url ?? null,
         roles: defaultRoles,

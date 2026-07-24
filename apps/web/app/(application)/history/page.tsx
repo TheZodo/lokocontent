@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { History, Clock, Trash2, X } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ import {
 } from "@/api/requests/history";
 import { getContentById } from "@/api/requests/content";
 import { useApiMutation, useApiQuery } from "@/api/query";
+import { canNavigateDirectToWatch } from "@/lib/watch-eligibility";
 
 type HistoryEntry = {
   content: VideoContent;
@@ -82,6 +84,7 @@ const HistorySkeleton = () => (
 );
 
 export default function HistoryPage() {
+  const router = useRouter();
   const { getToken, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
   const [selectedVideo, setSelectedVideo] = useState<VideoContent | null>(null);
@@ -157,6 +160,10 @@ export default function HistoryPage() {
   }, [contentDetailsQuery.data, selectedVideoId]);
 
   const handleVideoClick = (video: VideoContent) => {
+    if (canNavigateDirectToWatch(video)) {
+      router.push(`/watch/${video.id}`);
+      return;
+    }
     setSelectedVideo(video);
     setSelectedVideoId(video.id);
   };

@@ -13,6 +13,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { Role } from '@lokocontent/db'
 import { AnalyticsService } from './analytics.service'
 import { EarningsQueryDto } from './dto/earnings-query.dto'
+import { UsageQueryDto } from './dto/usage-query.dto'
 import { ApiExceptionFilter } from './filters/api-exception.filter'
 
 @ApiTags('Analytics')
@@ -44,6 +45,19 @@ export class AnalyticsController {
     return {
       success: true,
       data: earnings,
+    }
+  }
+
+  @Get('usage')
+  @ApiOperation({ summary: 'Get creator usage and watch-minute breakdown' })
+  async getUsage(
+    @CurrentUser() userId: string,
+    @Query() query: UsageQueryDto,
+  ) {
+    const usage = await this.analyticsService.getUsage(userId, query)
+    return {
+      success: true,
+      data: usage,
     }
   }
 }

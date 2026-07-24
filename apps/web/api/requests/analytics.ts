@@ -3,6 +3,12 @@ import type { ApiResponse } from "@/api/types";
 
 export type AnalyticsOverview = {
   totalViews: number;
+  settledViews: number;
+  provisionalViews: number;
+  liveViewers: number;
+  watchMinutes: number;
+  playingMinutes: number;
+  lastAnalyticsSyncAt: string | null;
   totalEarnings: number;
   totalContent: number;
   averageRating: number;
@@ -20,6 +26,29 @@ export type EarningsResponse = {
   total: number;
 };
 
+export type UsagePeriod = "day" | "week" | "month" | "year";
+
+export type UsageBreakdown = {
+  date: string;
+  views: number;
+  uniqueViewers: number;
+  watchMinutes: number;
+  playingMinutes: number;
+  billableMinutes: number;
+  freshness: "LIVE" | "PROVISIONAL" | "SETTLED";
+};
+
+export type UsageResponse = {
+  data: UsageBreakdown[];
+  total: {
+    views: number;
+    uniqueViewers: number;
+    watchMinutes: number;
+    playingMinutes: number;
+    billableMinutes: number;
+  };
+};
+
 export async function getAnalyticsOverview(
   api: ApiClient,
   options?: ApiRequestOptions
@@ -33,4 +62,12 @@ export async function getEarningsBreakdown(
   options?: ApiRequestOptions
 ): Promise<ApiResponse<EarningsResponse>> {
   return api.get("/analytics/earnings", { ...options, auth: true, query: params });
+}
+
+export async function getUsageBreakdown(
+  api: ApiClient,
+  params: { period: UsagePeriod },
+  options?: ApiRequestOptions
+): Promise<ApiResponse<UsageResponse>> {
+  return api.get("/analytics/usage", { ...options, auth: true, query: params });
 }

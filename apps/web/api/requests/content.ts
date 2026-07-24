@@ -77,6 +77,26 @@ export type ContentListParams = {
 
 export type CreatorUpload = VideoContent & { earnings: number };
 
+export type ContentAnalytics = {
+  contentId: string;
+  title: string;
+  views: number;
+  rawViews: number;
+  qualifiedViews: number;
+  uniqueViewers: number;
+  liveViews: number;
+  liveViewers: number;
+  watchMinutes: number;
+  playingMinutes: number;
+  averageWatchSeconds: number;
+  completionRate: number | null;
+  playbackFailureRate: number;
+  countryBreakdown: Array<{ value: string; count: number }>;
+  deviceBreakdown: Array<{ value: string; count: number }>;
+  freshness: "LIVE" | "PROVISIONAL" | "SETTLED";
+  lastAnalyticsSyncAt: string | null;
+};
+
 export type CreatorUploadsResponse = {
   data: CreatorUpload[];
   total: number;
@@ -175,4 +195,12 @@ export async function analyzeContentChanges(
     ...options,
     auth: true,
   });
+}
+
+export async function getContentAnalytics(
+  api: ApiClient,
+  id: string,
+  options?: ApiRequestOptions
+): Promise<ApiResponse<ContentAnalytics>> {
+  return api.get(`/content/${id}/analytics`, { ...options, auth: true });
 }

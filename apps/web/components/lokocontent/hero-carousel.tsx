@@ -8,11 +8,19 @@ import { Button } from "@/components/ui/button";
 import type { VideoContent } from "@/lib/lokocontent-data";
 
 interface HeroCarouselProps {
-  items: VideoContent[];
-  onItemClick?: (video: VideoContent) => void;
+  items: VideoContent[]
+  /** Fallback when onWatchNow / onMoreInfo are omitted */
+  onItemClick?: (video: VideoContent) => void
+  onWatchNow?: (video: VideoContent) => void
+  onMoreInfo?: (video: VideoContent) => void
 }
 
-export function HeroCarousel({ items, onItemClick }: HeroCarouselProps) {
+export function HeroCarousel({
+  items,
+  onItemClick,
+  onWatchNow,
+  onMoreInfo,
+}: HeroCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
@@ -91,7 +99,9 @@ export function HeroCarousel({ items, onItemClick }: HeroCarouselProps) {
         {/* CTA Buttons */}
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => onItemClick?.(currentItem)}
+            onClick={() =>
+              onWatchNow?.(currentItem) ?? onItemClick?.(currentItem)
+            }
             className="bg-loko-gold hover:bg-loko-gold/90 text-background font-semibold px-6 py-5"
           >
             <Play className="w-5 h-5 mr-2" fill="currentColor" />
@@ -99,7 +109,9 @@ export function HeroCarousel({ items, onItemClick }: HeroCarouselProps) {
           </Button>
           <Button
             variant="outline"
-            onClick={() => onItemClick?.(currentItem)}
+            onClick={() =>
+              onMoreInfo?.(currentItem) ?? onItemClick?.(currentItem)
+            }
             className="border-foreground/20 text-foreground hover:bg-foreground/10 px-6 py-5"
           >
             More Info
