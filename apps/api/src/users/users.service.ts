@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common'
 import { Prisma, User } from '@lokocontent/db'
+import { randomUUID } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateSettingsDto } from './dto/update-settings.dto'
@@ -10,12 +11,19 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getMe(userId: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({
+    let user = await this.prisma.user.findUnique({
       where: { id: userId },
     })
 
     if (!user) {
       throw new ForbiddenException('User not found')
+    }
+
+    if (!user.analyticsViewerId) {
+      user = await this.prisma.user.update({
+        where: { id: userId },
+        data: { analyticsViewerId: this.createAnalyticsViewerId() },
+      })
     }
 
     return user
@@ -74,5 +82,9 @@ export class UsersService {
     })
 
     return user
+  }
+
+  private createAnalyticsViewerId() {
+    return `viewer_${randomUUID()}`
   }
 }

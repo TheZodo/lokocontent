@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import Mux from '@mux/mux-node'
 import * as crypto from 'crypto'
+import { gunzipSync } from 'zlib'
 
 export interface DirectUploadResponse {
   uploadUrl: string
@@ -25,6 +26,13 @@ export interface MuxWebhookEvent {
   }
 }
 
+export interface MuxEngagementCounts {
+  views: number
+  viewers: number
+  updatedAt: Date | null
+  freshness: 'LIVE'
+}
+
 @Injectable()
 export class MuxService {
   private readonly logger = new Logger(MuxService.name)
@@ -35,6 +43,14 @@ export class MuxService {
       tokenId: process.env.MUX_TOKEN_ID,
       tokenSecret: process.env.MUX_TOKEN_SECRET,
     })
+  }
+
+  hasApiCredentials() {
+    return Boolean(process.env.MUX_TOKEN_ID && process.env.MUX_TOKEN_SECRET)
+  }
+
+  hasSigningCredentials() {
+    return Boolean(process.env.MUX_SIGNING_KEY && process.env.MUX_PRIVATE_KEY)
   }
 
   /**
@@ -109,6 +125,80 @@ export class MuxService {
     } catch (error) {
       this.logger.error(`Failed to get asset ${assetId}`, error)
       throw error
+    }
+  }
+
+  async listVideoViewDetails(start: Date, end: Date, maxRows = 1000) {
+    const timeframe = [
+      `${Math.floor(start.getTime() / 1000)}`,
+      `${Math.floor(end.getTime() / 1000)}`,
+    ]
+
+    const views: Array<Record<string, unknown>> = []
+
+    for await (const view of this.mux.data.videoViews.list({ timeframe })) {
+      if (views.length >= maxRows) {
+        break
+      }
+
+      const detail = await this.mux.data.videoViews.retrieve(view.id)
+      views.push(detail.data as unknown as Record<string, unknown>)
+    }
+
+    return views
+  }
+
+  async listVideoViewExports() {
+    return this.mux.data.exports.listVideoViews()
+  }
+
+  async downloadExportText(path: string) {
+    const response = await fetch(path)
+
+    if (!response.ok) {
+      throw new Error(`Failed to download Mux export: HTTP ${response.status}`)
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer())
+    const contentEncoding = response.headers.get('content-encoding')
+    const body =
+      path.endsWith('.gz') && contentEncoding !== 'gzip'
+        ? gunzipSync(buffer)
+        : buffer
+
+    return body.toString('utf8')
+  }
+
+  async getEngagementCountsForVideoId(
+    videoId: string,
+  ): Promise<MuxEngagementCounts> {
+    if (!this.hasSigningCredentials()) {
+      return { views: 0, viewers: 0, updatedAt: null, freshness: 'LIVE' }
+    }
+
+    const token = await this.mux.jwt.signViewerCounts(videoId, {
+      type: 'video',
+      expiration: '15m',
+    })
+    const statsBaseUrl =
+      process.env.MUX_STATS_BASE_URL?.replace(/\/$/, '') ??
+      'https://stats.mux.com'
+    const response = await fetch(`${statsBaseUrl}/counts?token=${token}`)
+
+    if (!response.ok) {
+      throw new Error(`Failed to retrieve Mux engagement counts: HTTP ${response.status}`)
+    }
+
+    const payload = (await response.json()) as {
+      data?: Array<{ views?: number; viewers?: number; updated_at?: string }>
+    }
+    const data = payload.data?.[0]
+
+    return {
+      views: data?.views ?? 0,
+      viewers: data?.viewers ?? 0,
+      updatedAt: data?.updated_at ? new Date(data.updated_at) : null,
+      freshness: 'LIVE',
     }
   }
 

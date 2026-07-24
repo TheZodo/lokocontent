@@ -19,6 +19,7 @@ import { unwrapApiResponse } from '@/api/client'
 import { getContentById } from '@/api/requests/content'
 import { getPlaybackUrl } from '@/api/requests/mux'
 import { updateWatchProgress } from '@/api/requests/history'
+import { getCurrentUser } from '@/api/requests/users'
 import { mapApiContentToVideoContent } from '@/lib/content-mappers'
 import type { VideoContent } from '@/lib/lokocontent-data'
 import { UnlockButton } from '@/components/lokocontent/unlock-button'
@@ -30,7 +31,7 @@ type WatchState =
   | { status: 'loading' }
   | { status: 'not_found' }
   | { status: 'forbidden'; content: VideoContent }
-  | { status: 'ready'; content: VideoContent }
+  | { status: 'ready'; content: VideoContent; viewerAnalyticsId?: string }
 
 const HISTORY_THROTTLE_MS = 10_000
 const HISTORY_PROGRESS_DELTA = 5
@@ -77,7 +78,7 @@ function WatchChromeShell({
 export default function WatchPage() {
   const params = useParams()
   const api = useApiClient()
-  const { getToken, isSignedIn, userId } = useAuth()
+  const { getToken, isSignedIn } = useAuth()
   const contentId = typeof params?.contentId === 'string' ? params.contentId : null
 
   const [state, setState] = useState<WatchState>({ status: 'loading' })
@@ -136,8 +137,18 @@ export default function WatchPage() {
           setState({ status: 'forbidden', content })
           return
         }
+        let viewerAnalyticsId: string | undefined
+        if (token) {
+          try {
+            const userResponse = await getCurrentUser(api, { token })
+            viewerAnalyticsId =
+              unwrapApiResponse(userResponse).data.analyticsViewerId ?? undefined
+          } catch {
+            // Mux can still track anonymous playback via its own viewer ID.
+          }
+        }
         if (cancelled) return
-        setState({ status: 'ready', content })
+        setState({ status: 'ready', content, viewerAnalyticsId })
       } catch {
         if (!cancelled) setState({ status: 'not_found' })
       }
@@ -255,7 +266,7 @@ export default function WatchPage() {
     )
   }
 
-  const { content } = state
+  const { content, viewerAnalyticsId } = state
   const playbackId = content.muxPlaybackId!
 
   return (
@@ -264,10 +275,17 @@ export default function WatchPage() {
         <div className="absolute inset-0 flex items-center justify-center p-0">
           <MuxPlayer
             ref={playerRef}
+            envKey={process.env.NEXT_PUBLIC_MUX_DATA_ENV_KEY}
             playbackId={playbackId}
             metadata={{
+              video_id: content.id,
               video_title: content.title,
-              viewer_user_id: userId ?? undefined,
+              video_creator_id: content.creatorId ?? undefined,
+              video_content_type: content.isPremium ? 'premium' : 'free',
+              viewer_user_id: viewerAnalyticsId,
+              custom_1: content.region,
+              custom_2: content.category,
+              custom_3: content.isPremium ? 'premium' : 'free',
             }}
             accentColor="#D4AF37"
             onTimeUpdate={handleTimeUpdate}

@@ -34,6 +34,10 @@ export class PrismaService
 
     // Delete in order respecting foreign key constraints
     await this.$transaction([
+      this.muxUsageImport.deleteMany(),
+      this.dailyCreatorUsage.deleteMany(),
+      this.dailyContentUsage.deleteMany(),
+      this.muxVideoView.deleteMany(),
       this.rating.deleteMany(),
       this.follow.deleteMany(),
       this.watchHistory.deleteMany(),

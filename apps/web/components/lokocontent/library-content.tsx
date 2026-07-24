@@ -18,6 +18,7 @@ import { type VideoContent, regions, categories } from "@/lib/lokocontent-data";
 import { EditContentModal } from "./edit-content-modal";
 import { useApiQuery } from "@/api/query";
 import { getMyUploads, type CreatorUpload } from "@/api/requests/content";
+import { getAnalyticsOverview } from "@/api/requests/analytics";
 import { mapApiContentToVideoContent } from "@/lib/content-mappers";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -39,6 +40,9 @@ export function LibraryContent() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const uploadsQuery = useApiQuery(["content", "my-uploads"], (api) =>
     getMyUploads(api, { limit: 100 })
+  );
+  const analyticsQuery = useApiQuery(["analytics", "overview"], (api) =>
+    getAnalyticsOverview(api)
   );
 
   useEffect(() => {
@@ -130,14 +134,19 @@ export function LibraryContent() {
     uploadsQuery.data?.totalEarnings ??
     uploads.reduce((sum, u) => sum + u.earnings, 0);
   const totalViews =
+    analyticsQuery.data?.totalViews ??
     uploadsQuery.data?.totalViews ??
     uploads.reduce((sum, u) => sum + parseViews(u.views), 0);
+  const provisionalViews = analyticsQuery.data?.provisionalViews ?? 0;
+  const liveViewers = analyticsQuery.data?.liveViewers ?? 0;
+  const watchMinutes = analyticsQuery.data?.watchMinutes ?? 0;
+  const lastAnalyticsSyncAt = analyticsQuery.data?.lastAnalyticsSyncAt ?? null;
 
   if (uploadsQuery.isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={`stats-skeleton-${index}`}
               className="p-4 rounded-xl bg-loko-surface border border-border"
@@ -178,7 +187,7 @@ export function LibraryContent() {
   return (
     <div className="space-y-6">
       {/* Stats Overview */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="p-4 rounded-xl bg-loko-surface border border-border">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-loko-gold/10">
@@ -201,6 +210,32 @@ export function LibraryContent() {
                 {formatViews(totalViews)}
               </p>
               <p className="text-sm text-muted-foreground">Total Views</p>
+              {(provisionalViews > 0 || liveViewers > 0) && (
+                <p className="text-xs text-muted-foreground">
+                  {provisionalViews > 0 ? `${formatViews(provisionalViews)} today` : null}
+                  {provisionalViews > 0 && liveViewers > 0 ? " · " : null}
+                  {liveViewers > 0 ? `${liveViewers} live` : null}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-loko-surface border border-border">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-loko-gold/10">
+              <BarChart3 className="w-5 h-5 text-loko-gold" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">
+                {formatMinutes(watchMinutes)}
+              </p>
+              <p className="text-sm text-muted-foreground">Watch Minutes</p>
+              {lastAnalyticsSyncAt && (
+                <p className="text-xs text-muted-foreground">
+                  Updated {formatDate(lastAnalyticsSyncAt)}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -498,6 +533,12 @@ function formatViews(views: number): string {
   return views.toString();
 }
 
+function formatMinutes(minutes: number): string {
+  if (minutes >= 1000000) return (minutes / 1000000).toFixed(1) + "M";
+  if (minutes >= 1000) return (minutes / 1000).toFixed(1) + "K";
+  return minutes.toFixed(minutes >= 10 ? 0 : 1);
+}
+
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
@@ -522,8 +563,22 @@ function mapUploadToUserContent(upload: CreatorUpload): UserContent {
 
   return {
     ...base,
-    status: upload.status ?? "draft",
+    status: normalizeStatus(upload.status),
     earnings: upload.earnings ?? 0,
     uploadDate: createdAt || new Date().toISOString(),
   };
+}
+
+function normalizeStatus(status: CreatorUpload["status"]): UserContent["status"] {
+  switch (status) {
+    case "PUBLISHED":
+      return "published";
+    case "HIDDEN":
+      return "hidden";
+    case "PROCESSING":
+      return "processing";
+    case "DRAFT":
+    default:
+      return "draft";
+  }
 }
